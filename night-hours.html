@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NIGHT HOURS</title>
+
+  <style>
+    :root {
+      --bg: #08090c;
+      --panel: #11131a;
+      --panel-2: #171a23;
+      --border: #272b36;
+      --text: #f4f4f5;
+      --muted: #9ca3af;
+      --green: #20c997;
+      --red: #ff3b30;
+      --amber: #ffcc00;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #171a23 0, #08090c 42%, #050509 100%);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .wrap {
+      width: min(1500px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 32px 0;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: -0.05em;
+      font-weight: 900;
+    }
+
+    .title-block p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clock {
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .clock strong {
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      min-height: 230px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .market {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      margin: 0;
+    }
+
+    .exchange {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+    }
+
+    .badge.open {
+      color: var(--green);
+      border-color: rgba(32,201,151,0.35);
+      background: rgba(32,201,151,0.10);
+    }
+
+    .badge.closed {
+      color: var(--red);
+      border-color: rgba(255,59,48,0.35);
+      background: rgba(255,59,48,0.10);
+    }
+
+    .middle {
+      margin-top: 24px;
+    }
+
+    .countdown-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .countdown {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      color: var(--red);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown.open {
+      color: var(--green);
+    }
+
+    .meta {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding-top: 8px;
+    }
+
+    .meta-row span:last-child {
+      color: var(--text);
+      text-align: right;
+      font-weight: 800;
+    }
+
+    .footer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .error {
+      border: 1px solid rgba(255,59,48,0.35);
+      background: rgba(255,59,48,0.08);
+      color: #ffd0cc;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    .sound-toggle {
+      flex: 0 0 auto;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 18px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .sound-toggle.active {
+      color: var(--green);
+      border-color: rgba(32,201,151,0.35);
+      background: rgba(32,201,151,0.10);
+    }
+
+    @media (max-width: 1200px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 680px) {
+      .wrap {
+        width: min(100vw - 24px, 1500px);
+        padding: 20px 0;
+      }
+
+      .header {
+        display: block;
+      }
+
+      .clock {
+        margin-top: 12px;
+        text-align: left;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sound-toggle {
+        margin-top: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="header">
+      <div class="title-block">
+        <h1>NIGHT HOURS</h1>
+        <p>Tokyo, Shanghai, Taiwan, Korea, Hong Kong, India, London e New York</p>
+      </div>
+
+      <button id="soundToggle" class="sound-toggle" onclick="enableSound()">Ativar som</button>
+
+      <div class="clock">
+        <div>Agora no Brasil</div>
+        <strong id="brClock">--:--:--</strong>
+        <div id="dataInfo">Carregando calendário...</div>
+      </div>
+    </section>
+
+    <div id="errorBox" class="error"></div>
+
+    <section id="grid" class="grid"></section>
+
+    <section class="footer">
+      <div>Fonte-base: exchange_calendars via GitHub Pages</div>
+      <div id="updatedAt">--</div>
+    </section>
+  </main>
+
+  <script>
+    var JSON_URL = "https://agenteumanafastquotes.github.io/markethours/market_calendar.json";
+
+    var MARKET_ORDER = [
+      "Tokyo",
+      "Shanghai",
+      "Taiwan",
+      "Korea",
+      "Hong Kong",
+      "India",
+      "London",
+      "New York"
+    ];
+
+    var REGULAR_HOURS = {
+      "Tokyo": [
+        ["09:00:00", "11:30:00"],
+        ["12:30:00", "15:30:00"]
+      ],
+      "Shanghai": [
+        ["09:30:00", "11:30:00"],
+        ["13:00:00", "15:00:00"]
+      ],
+      "Taiwan": [
+        ["09:00:00", "13:30:00"]
+      ],
+      "Korea": [
+        ["09:00:00", "15:30:00"]
+      ],
+      "Hong Kong": [
+        ["09:30:00", "12:00:00"],
+        ["13:00:00", "16:00:00"]
+      ],
+      "India": [
+        ["09:15:00", "15:30:00"]
+      ],
+      "London": [
+        ["08:00:00", "16:30:00"]
+      ],
+      "New York": [
+        ["09:30:00", "16:00:00"]
+      ]
+    };
+
+    var state = {
+      calendar: null,
+      cards: {},
+      audioCtx: null,
+      audioEnabled: false,
+      playedAlerts: {}
+    };
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatDuration(ms) {
+      if (ms < 0) {
+        ms = 0;
+      }
+
+      var total = Math.floor(ms / 1000);
+      var days = Math.floor(total / 86400);
+      total = total - days * 86400;
+
+      var hours = Math.floor(total / 3600);
+      total = total - hours * 3600;
+
+      var minutes = Math.floor(total / 60);
+      var seconds = total - minutes * 60;
+
+      if (days > 0) {
+        return days + "d " + pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+      }
+
+      return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+    }
+
+    function formatDateBR(dateKey) {
+      if (!dateKey || dateKey.indexOf("-") < 0) {
+        return "—";
+      }
+
+      var p = dateKey.split("-");
+      return p[2] + "/" + p[1];
+    }
+
+    function getZonedParts(date, timeZone) {
+      var dtf = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      });
+
+      var parts = dtf.formatToParts(date);
+      var out = {};
+
+      for (var i = 0; i < parts.length; i++) {
+        out[parts[i].type] = parts[i].value;
+      }
+
+      return {
+        year: Number(out.year),
+        month: Number(out.month),
+        day: Number(out.day),
+        hour: Number(out.hour),
+        minute: Number(out.minute),
+        second: Number(out.second),
+        dateKey: out.year + "-" + out.month + "-" + out.day,
+        time: out.hour + ":" + out.minute + ":" + out.second
+      };
+    }
+
+    function zonedTimeToUtc(dateKey, timeString, timeZone) {
+      var d = dateKey.split("-");
+      var t = timeString.split(":");
+
+      var y = Number(d[0]);
+      var mo = Number(d[1]);
+      var da = Number(d[2]);
+      var h = Number(t[0]);
+      var mi = Number(t[1]);
+      var s = Number(t[2] || 0);
+
+      var utc = new Date(Date.UTC(y, mo - 1, da, h, mi, s));
+
+      for (var i = 0; i < 4; i++) {
+        var p = getZonedParts(utc, timeZone);
+        var asIfUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+        var targetUtc = Date.UTC(y, mo - 1, da, h, mi, s);
+        var diff = asIfUtc - targetUtc;
+
+        if (diff === 0) {
+          break;
+        }
+
+        utc = new Date(utc.getTime() - diff);
+      }
+
+      return utc;
+    }
+
+    function buildSegments(marketName, marketData, dateKey) {
+      var base = REGULAR_HOURS[marketName] || [];
+      var specialOpen = marketData.special_opens && marketData.special_opens[dateKey];
+      var specialClose = marketData.special_closes && marketData.special_closes[dateKey];
+
+      var segments = [];
+
+      for (var i = 0; i < base.length; i++) {
+        segments.push([base[i][0], base[i][1]]);
+      }
+
+      if (segments.length && specialOpen) {
+        segments[0][0] = specialOpen;
+      }
+
+      if (segments.length && specialClose) {
+        segments = [[segments[0][0], specialClose]];
+      }
+
+      return segments;
+    }
+
+    function findNextSession(sessions, currentDateKey) {
+      for (var i = 0; i < sessions.length; i++) {
+        if (sessions[i] > currentDateKey) {
+          return sessions[i];
+        }
+      }
+
+      return null;
+    }
+
+    function findNextHoliday(marketData, currentDateKey) {
+      var holidays = marketData.holidays_or_closed_weekdays || [];
+
+      for (var i = 0; i < holidays.length; i++) {
+        if (holidays[i] >= currentDateKey) {
+          return holidays[i];
+        }
+      }
+
+      return null;
+    }
+
+    function computeMarketStatus(marketName, marketData, now) {
+      var tz = marketData.timezone;
+      var local = getZonedParts(now, tz);
+      var dateKey = local.dateKey;
+      var sessions = marketData.sessions || [];
+      var isSession = sessions.indexOf(dateKey) >= 0;
+
+      var openNow = false;
+      var nextOpenUtc = null;
+      var nextCloseUtc = null;
+      var countdownTargetUtc = null;
+      var countdownLabel = "ABRE EM";
+      var statusLabel = "Fechado";
+
+      if (isSession) {
+        var segments = buildSegments(marketName, marketData, dateKey);
+
+        for (var i = 0; i < segments.length; i++) {
+          var openUtc = zonedTimeToUtc(dateKey, segments[i][0], tz);
+          var closeUtc = zonedTimeToUtc(dateKey, segments[i][1], tz);
+
+          if (now >= openUtc && now < closeUtc) {
+            openNow = true;
+            nextCloseUtc = closeUtc;
+            countdownTargetUtc = closeUtc;
+            countdownLabel = "FECHA EM";
+            statusLabel = "Aberto agora";
+            break;
+          }
+
+          if (now < openUtc && nextOpenUtc === null) {
+            nextOpenUtc = openUtc;
+            countdownTargetUtc = openUtc;
+            countdownLabel = "ABRE EM";
+            break;
+          }
+        }
+      }
+
+      if (!openNow && countdownTargetUtc === null) {
+        var nextSession = findNextSession(sessions, dateKey);
+
+        if (nextSession) {
+          var nextSegments = buildSegments(marketName, marketData, nextSession);
+          nextOpenUtc = zonedTimeToUtc(nextSession, nextSegments[0][0], tz);
+          countdownTargetUtc = nextOpenUtc;
+          countdownLabel = "ABRE EM";
+        }
+      }
+
+      var countdownMs = countdownTargetUtc ? countdownTargetUtc.getTime() - now.getTime() : 0;
+      var nextHoliday = findNextHoliday(marketData, dateKey);
+
+      var nextOpenLabel = "";
+      if (!openNow && countdownLabel === "ABRE EM" && countdownTargetUtc) {
+        var nextOpenParts = getZonedParts(countdownTargetUtc, tz);
+        nextOpenLabel = nextOpenParts.dateKey + " " + nextOpenParts.time;
+      }
+
+      var openAlertKey = "";
+      if (!openNow && countdownLabel === "ABRE EM" && nextOpenLabel) {
+        openAlertKey = marketName + "|" + nextOpenLabel;
+      }
+
+      return {
+        marketName: marketName,
+        label: marketData.label,
+        code: marketData.exchange_calendar_code,
+        timezone: tz,
+        openNow: openNow,
+        statusLabel: statusLabel,
+        localTime: local.time,
+        nextHoliday: formatDateBR(nextHoliday),
+        countdownLabel: countdownLabel,
+        countdownMs: countdownMs,
+        nextOpenLabel: nextOpenLabel,
+        openAlertKey: openAlertKey,
+        countdown: countdownTargetUtc ? formatDuration(countdownMs) : "—"
+      };
+    }
+
+    function createCard(marketName, marketData) {
+      var el = document.createElement("article");
+      el.className = "card";
+      el.id = "card-" + marketName.replace(/\s+/g, "-").toLowerCase();
+
+      el.innerHTML =
+        '<div>' +
+          '<div class="top">' +
+            '<div>' +
+              '<h2 class="market">' + escapeHtml(marketName) + '</h2>' +
+              '<div class="exchange">' + escapeHtml(marketData.label) + '<br>' + escapeHtml(marketData.exchange_calendar_code) + '</div>' +
+            '</div>' +
+            '<div class="badge">--</div>' +
+          '</div>' +
+
+          '<div class="middle">' +
+            '<div class="countdown-label">--</div>' +
+            '<div class="countdown">--:--:--</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="meta">' +
+          '<div class="meta-row"><span>Horário local</span><span class="local-time">--:--:--</span></div>' +
+          '<div class="meta-row"><span>Próximo feriado</span><span class="next-holiday">--/--</span></div>' +
+          '<div class="meta-row"><span>Fonte-base</span><span>' + escapeHtml(marketData.exchange_calendar_code) + ' | ' + escapeHtml(marketData.timezone) + '</span></div>' +
+        '</div>';
+
+      return el;
+    }
+
+    function renderBase(calendar) {
+      var grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      for (var i = 0; i < MARKET_ORDER.length; i++) {
+        var name = MARKET_ORDER[i];
+        var data = calendar.markets[name];
+
+        if (!data) {
+          continue;
+        }
+
+        var card = createCard(name, data);
+        grid.appendChild(card);
+        state.cards[name] = card;
+      }
+
+      document.getElementById("dataInfo").textContent =
+        "JSON até " + calendar.end_date;
+
+      document.getElementById("updatedAt").textContent =
+        "Atualizado em UTC: " + calendar.generated_at_utc;
+    }
+
+    function updateCards() {
+      if (!state.calendar) {
+        return;
+      }
+
+      var now = new Date();
+
+      document.getElementById("brClock").textContent =
+        new Intl.DateTimeFormat("pt-BR", {
+          timeZone: "America/Sao_Paulo",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        }).format(now);
+
+      for (var i = 0; i < MARKET_ORDER.length; i++) {
+        var name = MARKET_ORDER[i];
+        var data = state.calendar.markets[name];
+        var card = state.cards[name];
+
+        if (!data || !card) {
+          continue;
+        }
+
+        var s = computeMarketStatus(name, data, now);
+
+        maybePlayOpenAlert(s);
+
+        var badge = card.querySelector(".badge");
+        var countdown = card.querySelector(".countdown");
+
+        badge.textContent = s.statusLabel;
+        badge.className = "badge " + (s.openNow ? "open" : "closed");
+
+        card.querySelector(".countdown-label").textContent = s.countdownLabel;
+
+        countdown.textContent = s.countdown;
+        countdown.className = "countdown " + (s.openNow ? "open" : "");
+
+        card.querySelector(".local-time").textContent = s.localTime;
+        card.querySelector(".next-holiday").textContent = s.nextHoliday;
+      }
+    }
+
+    function showError(message) {
+      var box = document.getElementById("errorBox");
+      box.style.display = "block";
+      box.textContent = message;
+    }
+
+    function enableSound() {
+      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        showError("Web Audio API não suportada neste navegador.");
+        return;
+      }
+      if (!state.audioCtx) {
+        state.audioCtx = new AudioContextClass();
+      }
+      if (state.audioCtx.state === "suspended") {
+        state.audioCtx.resume();
+      }
+      state.audioEnabled = true;
+      var btn = document.getElementById("soundToggle");
+      btn.textContent = "Som ativo";
+      btn.classList.add("active");
+      playOpeningGong();
+    }
+
+    function playTone(freq, startOffset, duration, type, gainValue) {
+      if (!state.audioCtx) {
+        return;
+      }
+      var ctx = state.audioCtx;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + startOffset);
+      gain.gain.exponentialRampToValueAtTime(gainValue, ctx.currentTime + startOffset + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startOffset + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + startOffset);
+      osc.stop(ctx.currentTime + startOffset + duration + 0.05);
+    }
+
+    function playOpeningGong() {
+      playTone(196, 0.00, 0.90, "sine", 0.24);
+      playTone(392, 0.02, 0.55, "sine", 0.10);
+      playTone(588, 0.04, 0.30, "sine", 0.05);
+    }
+
+    function maybePlayOpenAlert(status) {
+      if (!state.audioEnabled) {
+        return;
+      }
+      if (!status.openAlertKey) {
+        return;
+      }
+      if (status.countdownLabel !== "ABRE EM") {
+        return;
+      }
+      if (status.openNow) {
+        return;
+      }
+      if (state.playedAlerts[status.openAlertKey]) {
+        return;
+      }
+      if (status.countdownMs > 0 && status.countdownMs <= 5000) {
+        state.playedAlerts[status.openAlertKey] = true;
+        playOpeningGong();
+      }
+    }
+
+    async function boot() {
+      try {
+        var res = await fetch(JSON_URL, { cache: "no-store" });
+
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+
+        var calendar = await res.json();
+
+        if (!calendar || !calendar.markets) {
+          throw new Error("JSON inválido");
+        }
+
+        state.calendar = calendar;
+        renderBase(calendar);
+        updateCards();
+
+        setInterval(updateCards, 1000);
+      } catch (err) {
+        showError("Falha ao carregar calendário: " + err.message);
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
