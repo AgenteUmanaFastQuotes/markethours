@@ -2,9 +2,9 @@
 
 ## Overview
 
-Umana is the event production arm of Grupo Thanks, a Brazilian corporate events company. Umana specializes in full-service event production: from initial briefing and supplier quotation through compliance verification, contract management, logistics coordination, and final billing. Clients range from large corporations holding national sales conventions to boutique product launches and executive dinners. The company operates with a lean production team, meaning that operational tooling must multiply staff capacity rather than require dedicated technical operators.
+Umana is the event production arm of Grupo Thanks, a Brazilian corporate event production and entertainment group. Umana specializes in full-service production of large-scale corporate events: national sales conventions, award dinners, product launches, executive summits, training programs, team-building activations, and experiential brand events. Clients include major Brazilian and multinational corporations requiring end-to-end event management with high production standards and rigorous financial accountability.
 
-The current operational system was built organically in Google Workspace — primarily Google Apps Script and Google Sheets — and has grown to support the full supplier quotation lifecycle (FastQuotes), internal project planning (MasterInterna), supplier compliance checking (DashboardCompliance), and billing coordination (FastBilling). While the system works today, it carries significant architectural debt that creates fragility, dependency on specific individuals, and barriers to scaling or auditing.
+The company operates with a lean production team where operational tooling must multiply staff capacity rather than consume it. Over several years, Umana's operations team built a suite of interconnected Google Workspace tools — primarily Google Sheets, Google Apps Script (GAS), and Google Drive — that together handle the complete event job lifecycle: from initial briefing intake, supplier quote solicitation (FastQuotes), compliance verification via Infosimples (CNDs/CNPJ), through to billing coordination and document archival. This system is mission-critical, running daily for active jobs, and now carries significant architectural debt that creates fragility, creates personal-account dependencies, and blocks scaling or auditing capabilities.
 
 ---
 
@@ -12,50 +12,52 @@ The current operational system was built organically in Google Workspace — pri
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                        UMANA OPERATIONS PLATFORM (Current)                      │
+│                        UMANA OPERATIONS PLATFORM (CURRENT)                      │
+│                              Google Workspace / GAS                             │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
-  External Intake                  Core Orchestration               User Interfaces
-  ───────────────                  ──────────────────               ───────────────
-
-  ┌─────────────────┐              ┌───────────────────────────┐    ┌──────────────────────────┐
-  │  REDUX/PROJETOS │──── JOB ────▶│  AgenteUmanaFastQuotes    │◀──▶│  Dashboard FastQuotes Ops│
-  │  (Google Sheets)│   intake     │  (Apps Script Library)    │    │  (Web App / UI)          │
-  │                 │              │                           │    └──────────────────────────┘
-  │  • Form intake  │              │  • FastQuotes generation  │
-  │  • Job mgmt     │              │  • Email dispatch         │    ┌──────────────────────────┐
-  │  • PROJETOS tab │              │  • Quote monitoring       │◀──▶│  DashboardCompliance     │
-  └─────────────────┘              │  • Proposal extraction    │    │  (Web App / UI)          │
-                                   │  • AI orchestration       │    └──────────────────────────┘
-  ┌─────────────────┐              │  • Compliance triggers    │
-  │   BaseDados     │◀────────────▶│  • Billing coordination   │
-  │  (Google Sheets)│              └───────────────────────────┘
-  │                 │                          │
-  │  • Suppliers    │                          │ integrations
-  │  • Contacts     │              ┌───────────┼───────────────┐
-  │  • Compliance   │              ▼           ▼               ▼
-  └─────────────────┘         ┌────────┐  ┌────────┐  ┌──────────────┐
-                               │ Gmail  │  │ Drive  │  │  Claude API  │
-                               │        │  │        │  │  (Anthropic) │
-                               │ • Send │  │ • Docs │  │              │
-                               │ • Read │  │ • PDFs │  │ • Proposal   │
-                               │ • Mon. │  │ • Fldrs│  │   extraction │
-                               └────────┘  └────────┘  │ • FQ gen.   │
-                                                        │ • Briefing  │
-                               ┌────────────────────┐  │   parsing   │
-                               │    Infosimples     │  └──────────────┘
-                               │                    │
-                               │  • CNPJ lookup     │
-                               │  • CND checks      │
-                               │  • Receita Federal │
-                               └────────────────────┘
-
-  Configuration Layer
-  ───────────────────
-  ┌──────────────────────────────────────────────────────────────────┐
-  │  PropertiesService  (GAS ScriptProperties / UserProperties)      │
-  │  • API keys  • Spreadsheet IDs  • Folder IDs  • Feature flags    │
-  └──────────────────────────────────────────────────────────────────┘
+  ┌──────────────────┐    JOB       ┌──────────────────────────────────┐
+  │  REDUX/PROJETOS  │─────────────▶│      AgenteUmanaFastQuotes       │
+  │  (Google Sheets) │   intake     │  (Apps Script Library / Web App) │
+  │                  │              │                                  │
+  │  • Form intake   │              │  • FastQuote generation (AI)     │
+  │  • Job catalog   │              │  • Email dispatch to suppliers   │
+  │  • JOB_ID source │              │  • Gmail reply monitoring        │
+  │  • PROJETOS tab  │              │  • Proposal extraction (AI)      │
+  │  • Drive links   │              │  • Status state machine          │
+  └──────────────────┘              │  • Compliance triggers           │
+                                    │  • Billing coordination          │
+  ┌──────────────────┐              └──────────┬───────────────────────┘
+  │    BaseDados     │◀────────────────────────┤
+  │  (Google Sheets) │   read/write            │ bidirectional read/write
+  │                  │                         ▼
+  │  • FORNECEDORES  │              ┌──────────────────────────────────┐
+  │    _MASTER       │              │    Dashboard FastQuotes Ops      │
+  │  • FORNECEDOR    │              │  (GAS Web App — operational UI)  │
+  │    _CONTATOS     │              │                                  │
+  │  • Compliance    │              │  • Batch management              │
+  │    status cache  │              │  • Email preview & approval      │
+  └──────────────────┘              │  • Status monitoring             │
+          │                         │  • Manual overrides              │
+          │ CND/CNPJ data           └──────────────────────────────────┘
+          ▼
+  ┌──────────────────┐              ┌──────────────────────────────────┐
+  │ DashboardCompl-  │              │         EXTERNAL SERVICES        │
+  │   iance          │              │                                  │
+  │  (GAS Web App)   │   ┌──────────┤  Gmail  │ Drive │ Claude  │Info │
+  │                  │   │          │ (email) │ (docs)│  API    │simpl│
+  │  • CND status    │   │          │         │       │ (Anthr.)│ es  │
+  │  • Revalidation  │   │          └─────────────────────────────────┘
+  │    campaigns     │   │
+  │  • Infosimples   │   │
+  │    results       │   │
+  └──────────────────┘   │
+                         │
+  ┌──────────────────────▼──────────────────────────────────────────────┐
+  │                    CONFIGURATION LAYER                              │
+  │  PropertiesService (GAS ScriptProperties / UserProperties)          │
+  │  API keys | Spreadsheet IDs | Folder IDs | Feature flags | Tokens   │
+  └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -63,92 +65,83 @@ The current operational system was built organically in Google Workspace — pri
 ## Component Inventory
 
 | Component | Type | Technology | Owner | Critical Functions | Risks |
-|-----------|------|------------|-------|-------------------|-------|
-| **REDUX/PROJETOS** | Data source / intake | Google Sheets (manual + Forms) | Umana production team | Job intake, project catalog, JOB_ID source of truth, links to MasterInterna and Drive folders | Single spreadsheet; manual data entry errors; no schema validation; anyone with edit access can corrupt data |
-| **AgenteUmanaFastQuotes** | Library / orchestrator | Google Apps Script (clasp, ES5-compatible) | daniel.valin@thanks.ag | FastQuote email generation, AI prompt construction, email dispatch, Gmail monitoring, quote response parsing, compliance trigger, billing coordination | Runs as daniel.valin@thanks.ag; no unit tests; trigger failures are silent; quota limits on Gmail API; no idempotency; hardcoded spreadsheet IDs in multiple places |
-| **Dashboard FastQuotes Ops** | Web App (UI) | Google Apps Script Web App (HTML + vanilla JS served from GAS) | daniel.valin@thanks.ag | Operational UI for FastQuote review, email preview, send/cancel actions, status display, batch management | Deployed as "Execute as: Me" meaning all actions run as daniel.valin@thanks.ag; no access control beyond Share settings; session/state managed in URL params |
-| **MasterInterna** | Document template | Google Sheets template (per-project copy) | Umana production team | Project timeline, internal task tracking, budget breakdown per project | Each project gets a manual copy; no programmatic sync; drift between projects; manual linking to PROJETOS |
-| **BaseDados** | Master data store | Google Sheets (multi-tab) | daniel.valin@thanks.ag | FORNECEDORES_MASTER (supplier registry), FORNECEDOR_CONTATOS (contact details), compliance history, CND status cache | Single spreadsheet as database; no referential integrity; concurrent edit conflicts; CNPJ can be stored as number (formatting loss); owned by personal account |
-| **DashboardCompliance** | Web App (UI) | Google Apps Script Web App | daniel.valin@thanks.ag | Compliance campaign management, CND status display, revalidation dispatch, Infosimples result rendering | Same execution account risk as FastQuotes dashboard; compliance data stored in same fragile spreadsheet |
-| **Gmail** | External service | Gmail API (via GAS UrlFetchApp + GmailApp) | daniel.valin@gmail.com / daniel.valin@thanks.ag | Email dispatch to suppliers, monitoring replies, marking threads, extracting attachments | Relies on specific Gmail label structure; read marking tied to processing success (fragile); reply threading depends on correct Message-ID tracking |
-| **Drive** | External service | Google Drive API (via GAS DriveApp) | daniel.valin@thanks.ag | Proposal PDF storage, FICHA CADASTRAL storage, contract folder structure, MasterInterna copies | Folder IDs hardcoded in PropertiesService; ownership tied to personal account; no folder structure enforcement |
-| **Claude API (Anthropic)** | External AI service | Anthropic Claude API (HTTP via UrlFetchApp) | Anthropic account linked to daniel.valin | Proposal content extraction from PDF attachments, FastQuote email body generation, briefing parsing | API key stored in ScriptProperties; no fallback if API is unavailable; prompt versioning is ad-hoc; token costs unmonitored |
-| **Infosimples** | External data service | Infosimples REST API (HTTP via UrlFetchApp) | Infosimples account | CNPJ registry lookup, CND status check from Receita Federal, INSS, FGTS, Trabalhista | API key in ScriptProperties; code 611 (sem CND online) must NOT be treated as debt — logic depends on correct interpretation; rate limits not managed |
-| **PropertiesService** | Configuration store | GAS ScriptProperties + UserProperties | daniel.valin@thanks.ag (script owner) | API keys, spreadsheet IDs, folder IDs, feature flags, email templates | No versioning; no audit trail for changes; secrets readable by anyone with script edit access; tightly coupled to deployment identity |
+|-----------|------|------------|-------|--------------------|-------|
+| **REDUX/PROJETOS** | Source of truth / data store | Google Sheets (multi-tab workbook with Google Forms integration) | Umana production team (de facto: daniel.valin@thanks.ag) | Job intake via form submission, JOB_ID assignment, project metadata catalog, links to MasterInterna and Drive folders, trigger point for FastQuotes workflow, PROJETOS tab as job registry | Single spreadsheet is sole data store; no schema enforcement; manual data entry errors propagate downstream; concurrent edits cause silent corruption; anyone with edit access can corrupt intake data |
+| **AgenteUmanaFastQuotes** | Core orchestration library | Google Apps Script Library (.gs files, ES5-compatible) deployed as script attached to BaseDados or standalone | daniel.valin@thanks.ag | FastQuote email generation via Claude API, Gmail outbound send, Gmail inbound monitoring, quote response parsing and extraction, status state machine management, Drive folder handling, PropertiesService reads, compliance triggers, billing coordination | No automated tests; 6-minute GAS execution wall-clock limit truncates large batches; executes as daniel.valin@thanks.ag; API key in PropertiesService; hardcoded spreadsheet IDs; trigger failures are silent; no idempotency guarantees |
+| **Dashboard FastQuotes Ops** | Operational web UI | GAS Web App (HTML/vanilla JS/CSS served via doGet()) | daniel.valin@thanks.ag | Operator interface for triggering FastQuote batches, reviewing AI-generated email previews before send, monitoring per-line status, approving or cancelling sends, viewing batch progress | Deployed under personal account (Execute as: Me); re-deployment requires account access; no staging environment; session state is ephemeral; all UI actions run with daniel.valin@thanks.ag permissions |
+| **MasterInterna** | Project planning template | Google Sheets template (manually copied per project) | Umana production team | Internal project timeline, task assignment, budget line tracking, milestone status, team roster per project | Manual copy process leads to template drift; no programmatic sync with PROJETOS; links between PROJETOS and MasterInterna are fragile free-text URLs; no version control on template |
+| **BaseDados** | Supplier master data store | Google Sheets (multi-tab workbook) | daniel.valin@thanks.ag | FORNECEDORES_MASTER tab (CNPJ, company name, category, compliance status), FORNECEDOR_CONTATOS tab (contact emails, names, preferential FastQuotes flag), CND consultation history, revalidation campaign data | CNPJ stored as text required but Sheets auto-converts to number (losing leading zeros); no referential integrity between suppliers and contacts; duplicate records; stale contact data; owned by personal account so others have reduced access |
+| **DashboardCompliance** | Compliance management web UI | GAS Web App (HTML/vanilla JS/CSS) | daniel.valin@thanks.ag | CND consultation status display per supplier, revalidation campaign creation and dispatch, Infosimples API query orchestration, compliance response processing and status updates | Same deployment and execution account risks as FastQuotes dashboard; compliance data lives in same fragile BaseDados spreadsheet; no automated refresh — operators must trigger manually |
+| **Gmail** | Email transport (bidirectional) | Gmail API via GAS GmailApp + UrlFetchApp | daniel.valin@thanks.ag (sending identity) | Outbound FastQuote emails to suppliers (with AI-generated bodies), inbound supplier reply monitoring, email thread tracking via Message-ID, attachment extraction, marking threads read after processing | All email sent from personal account; daily send limits on personal/Workspace Gmail; if account suspended all outbound email stops; reply monitoring depends on exact label and thread structure; marking read tied to processing success (fragile — partial processing leaves emails unread or incorrectly marked) |
+| **Drive** | Document storage | Google Drive API via GAS DriveApp | daniel.valin@thanks.ag | Job folder hierarchy creation and management, proposal PDF/attachment storage from suppliers, NF/ND/fatura document archival, FICHA CADASTRAL storage, MasterInterna copy storage | Folder IDs hardcoded in PropertiesService; folder structure depends on naming conventions enforced only by convention not code; ownership tied to personal account; no automated archival or expiry |
+| **PropertiesService** | Configuration and secrets store | GAS ScriptProperties + UserProperties | daniel.valin@thanks.ag (script owner) | Anthropic API key storage, spreadsheet IDs, Drive folder IDs, script execution flags, idempotency state flags, email template strings | Secrets bound to script owner's GAS project; no rotation mechanism; no audit trail for property changes; readable by anyone with script editor access; completely lost if script is recreated rather than transferred |
+| **Infosimples API** | External CND/CNPJ data provider | REST API (third-party Brazilian data broker) | Umana (billing account linked through daniel.valin) | Federal CND (Receita Federal), INSS CND, FGTS CND, Labor CND (Trabalhista) queries by CNPJ, certificate data retrieval, debt status code interpretation | API credits consumed per query; rate limits not managed; code 611 (sem emissão de certidão online) is NOT a debt accusation and must not be treated as irregular — logic correctness is critical; external dependency with no fallback |
+| **Claude API (Anthropic)** | AI generation service | Anthropic Claude API via HTTP (UrlFetchApp) | Personal Anthropic account linked to daniel.valin | FastQuote email body generation, supplier proposal content extraction from PDF attachments/text, briefing summarization, prompt construction for email campaigns | API key stored in ScriptProperties; cost per call not tracked per job or per campaign; model version not pinned (prompt behavior may drift across model updates); no fallback if API unavailable; token usage unmonitored |
 
 ---
 
 ## Known Architectural Risks
 
-### 1. Single Spreadsheet as Database
+### 1. Single Spreadsheet as Operational Database
 
-Google Sheets was designed for human use, not as an application database. The current system uses multiple Sheets files as primary data stores with no schema enforcement, no foreign key relationships, no transactions, and no query planner. Concurrent edits from multiple users (or from triggers running simultaneously) can produce silent corruption. The 10 million cell limit is a hard ceiling with no graceful degradation path.
+Google Sheets was designed for collaborative human data entry, not as an application database. The current system uses REDUX/PROJETOS and BaseDados as its sole persistent data stores with no schema enforcement, no foreign key relationships, no transactions, and no query planner. Concurrent edits from multiple users — or from GAS triggers running simultaneously — can produce silent data corruption with no error surfaced.
 
-**Specific risks:**
-- CNPJ values stored as numbers lose leading zeros (e.g., `08123456000195` becomes `8123456000195`), breaking all downstream lookups.
-- Row deletions leave dangling references in other sheets.
-- Column insertions break hardcoded column-index reads throughout the Apps Script codebase.
-- No backup/restore mechanism beyond Drive's native version history (which caps at 200 versions for large files).
+Specific failure modes:
+- CNPJ values stored without explicit text formatting are silently converted to numbers by Sheets, losing leading zeros. `08123456000195` becomes `8123456000195`, breaking all downstream CNPJ lookups and CND queries.
+- Row deletions leave dangling references in other sheets with no integrity check.
+- Column insertions break hardcoded column-index reads throughout the Apps Script codebase (e.g., `row[4]` reads wrong data after a column is inserted before column E).
+- No backup or restore mechanism beyond Drive's native version history, which caps at 200 versions for large files and does not support point-in-time recovery.
 
-### 2. Personal Account Ownership (`daniel.valin@thanks.ag`)
+### 2. Personal Account Ownership
 
-The entire operational system executes with the identity of `daniel.valin@thanks.ag`. This creates a single point of failure for the entire Umana production operation:
-
-- If the account is suspended, locked, or if the individual leaves the organization, all automated processes stop immediately.
-- Apps Script trigger ownership, Web App deployment, Drive folder ownership, API credentials, and Gmail sending all share this single identity.
-- The account carries personal liability for all API usage billed through it.
-- Org-level Google Workspace policies applied to this account affect all automations.
+The entire operational system executes with the identity of `daniel.valin@thanks.ag`. This single identity owns: Apps Script trigger installation, Web App deployment, Drive folder ownership, API credential storage, and Gmail sending. If this account is suspended, its license removed, the individual leaves the organization, or the account is locked for any reason, the entire Umana production operation halts immediately with no automated failover.
 
 ### 3. No Automated Tests
 
-The AgenteUmanaFastQuotes library contains thousands of lines of business logic with zero automated test coverage. Every change is validated manually, and regressions are discovered in production. The Apps Script runtime makes unit testing nearly impossible without significant tooling investment (clasp + jest + mock injections).
+The AgenteUmanaFastQuotes library contains the core business logic of the platform with zero automated test coverage. Every change is validated manually, and regressions are discovered in production. The GAS runtime makes unit testing nearly impossible without significant tooling investment (clasp + jest + mock injection). Business-critical logic such as the InfoSimples code 611 interpretation, email deduplication guards, and FastQuote protected-status checks have no test coverage.
 
 ### 4. Fragile Time-Based Triggers
 
-Several critical workflows run on Google Apps Script time-based triggers (e.g., Gmail monitoring every 5 minutes, CND revalidation checks). These triggers:
-- Have a combined daily execution quota across the account (6 hours/day for consumer accounts, 6 hours/day for Workspace).
-- Do not alert on failure by default (errors go to the script owner's email, which may be unmonitored).
-- Cannot be monitored externally (no health check endpoint).
-- Can be accidentally deleted by any project editor.
-- Are not version-controlled — trigger configuration exists only in the GAS project dashboard.
+Several critical workflows run on GAS time-based triggers: Gmail reply monitoring, CND revalidation checks, billing status polling. These triggers fail silently — errors are emailed to the script owner (potentially unmonitored), there is no health-check endpoint, they cannot be monitored externally, and they can be accidentally deleted by any project editor. Trigger configuration is not version-controlled and exists only in the GAS project dashboard.
 
-### 5. Hardcoded IDs Throughout the Codebase
+### 5. Hardcoded IDs Throughout
 
-Spreadsheet IDs, folder IDs, named ranges, tab names, and column indices are hardcoded in multiple locations across the Apps Script codebase. A single spreadsheet restructuring (tab rename, column insertion, file copy) can break multiple unrelated workflows silently.
-
-**Known hardcoded dependencies:**
-- REDUX/PROJETOS spreadsheet ID
-- BaseDados spreadsheet ID
-- Drive folder IDs for each category (ORCAMENTOS, CONTRATOS E CARTAS, etc.)
-- Gmail label names
-- Named ranges in MasterInterna
+Spreadsheet IDs, Drive folder IDs, tab names, column indices, and named ranges are hardcoded in multiple locations across the Apps Script codebase and in PropertiesService. A single structural change (tab rename, column insertion, spreadsheet recreation) can break multiple unrelated workflows silently with no error surfaced until the next run.
 
 ### 6. No Audit Trail
 
-No record is kept of who triggered which action, when, with what inputs, and with what outcome. When a supplier email is sent incorrectly, or a compliance status is overwritten, there is no log to diagnose the cause. This creates compliance risk (who approved this payment?), operational risk (which batch was sent to which supplier?), and debugging difficulty.
+No record is kept of who triggered which action, when, with what inputs, and with what outcome. When a supplier receives an incorrect FastQuote email, or a compliance status is overwritten, or a billing line is processed, there is no immutable log to diagnose cause, assign responsibility, or reconstruct history. This creates compliance risk, operational risk, and debugging difficulty.
 
 ### 7. Mixed Execution Accounts
 
-Some scripts execute as the deploying user (daniel.valin@thanks.ag), some execute as the accessing user (when configured for user-as-executor), and some mix both within the same workflow. This creates inconsistent Gmail thread ownership, Drive file ownership, and API attribution.
+Some scripts execute as the deploying user (daniel.valin@thanks.ag), some as the accessing user, depending on Web App deployment configuration. This inconsistency creates unpredictable Gmail thread ownership, Drive file ownership, and API usage attribution across different entry points.
 
 ### 8. No Idempotency
 
-Email dispatch, CND checks, and billing triggers have no idempotency mechanism. A trigger that runs twice (e.g., due to a timeout-then-retry scenario) will send duplicate emails, create duplicate CND consultations, or generate duplicate billing entries. There are partial guard conditions in some functions, but they are not systematic.
+Email dispatch, CND checks, and billing triggers have no systematic idempotency mechanism. A trigger that runs twice due to a timeout-then-retry scenario will send duplicate emails, create duplicate CND consultations, or generate duplicate billing entries. Partial guard conditions exist in some functions but are not transactional and can be left in inconsistent states by GAS execution timeouts.
+
+### 9. GAS 6-Minute Execution Wall
+
+All GAS script executions are subject to a 6-minute hard wall-clock timeout. Large FastQuote batches (20+ suppliers), bulk CND consultations, and multi-step billing workflows routinely exceed this limit. Partial execution leaves the system in an inconsistent state — some records updated, some not — with no automated detection or remediation of the partial run.
+
+### 10. No Environment Separation
+
+There is no development, staging, or sandbox environment. All development and testing is performed against the production spreadsheet with live supplier data. Any code change or experiment carries direct risk to live operational data and running supplier communications.
 
 ---
 
-## Current Execution Identity Risk Summary
+## Current Execution Identity Risk Detail
 
-| Dependency Type | Current Account | Risk if Unavailable | Target Account |
-|-----------------|-----------------|--------------------|-----------------|
-| Apps Script Trigger Ownership | daniel.valin@thanks.ag | All triggers stop | preproducao@umana.ag |
-| Web App Deployment Owner | daniel.valin@thanks.ag | Dashboard inaccessible | preproducao@umana.ag |
-| Gmail Sending Identity | daniel.valin@thanks.ag | No outbound email | preproducao@umana.ag |
-| Drive Folder Ownership | daniel.valin@thanks.ag | Write access lost | preproducao@umana.ag |
-| Anthropic API Billing | Personal/thanks.ag account | No AI features | umana.ag org account |
-| Infosimples API Key | daniel.valin@thanks.ag | No CNPJ/CND lookups | preproducao@umana.ag |
-| BaseDados Spreadsheet Owner | daniel.valin@thanks.ag | Read-only for others | preproducao@umana.ag |
-| REDUX/PROJETOS Edit Access | daniel.valin@thanks.ag | Intake broken | preproducao@umana.ag |
-| PropertiesService Owner | daniel.valin@thanks.ag | Config inaccessible | preproducao@umana.ag |
+| Dependency Type | Current Account | Failure Mode if Unavailable | Priority to Migrate | Target Account |
+|-----------------|-----------------|----------------------------|--------------------|-|
+| Apps Script trigger ownership | daniel.valin@thanks.ag | All scheduled workflows stop (monitoring, CND, billing polling) | CRITICAL | preproducao@umana.ag |
+| Web App deployment owner | daniel.valin@thanks.ag | Dashboard FastQuotes Ops inaccessible | CRITICAL | preproducao@umana.ag |
+| Gmail sending identity | daniel.valin@thanks.ag | No outbound FastQuote or compliance emails | CRITICAL | preproducao@umana.ag |
+| Drive folder ownership | daniel.valin@thanks.ag | Proposals and documents cannot be written | HIGH | preproducao@umana.ag |
+| Anthropic API credentials | Personal account / thanks.ag | No AI-powered generation or extraction | HIGH | umana.ag org account |
+| Infosimples API key | Stored in daniel.valin's ScriptProperties | No CNPJ or CND lookups | HIGH | preproducao@umana.ag |
+| BaseDados spreadsheet owner | daniel.valin@thanks.ag | Others lose write access to supplier master | HIGH | preproducao@umana.ag |
+| REDUX/PROJETOS edit access | daniel.valin@thanks.ag | Job intake and status updates broken | HIGH | preproducao@umana.ag |
+| PropertiesService config owner | daniel.valin@thanks.ag | All configuration inaccessible or overwritten | CRITICAL | preproducao@umana.ag |
 
-**Hard rule:** The system must be fully operational if `daniel.valin@thanks.ag` is unavailable, suspended, or has left the organization. Any component that fails this test is a critical dependency that must be migrated before that component is considered production-safe.
+**Governing rule**: The system must be fully operable if `daniel.valin@thanks.ag` is unavailable for any reason. Any component that fails this test is a critical risk item that must be resolved before that component is considered production-stable.
