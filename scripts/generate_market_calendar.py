@@ -65,10 +65,12 @@ def parse_args():
 def validate_calendar_codes():
     available = set(xcals.get_calendar_names())
     errors = []
+
     for name, info in MARKETS.items():
         code = info["exchange_calendar_code"]
         if code not in available:
             errors.append(f"  - '{code}' for {name} not found in exchange_calendars")
+
     if errors:
         print("ERROR: The following calendar codes are invalid:", file=sys.stderr)
         for e in errors:
@@ -104,11 +106,37 @@ def get_special_times(calendar, sessions_set):
     return special_opens, special_closes
 
 
+def get_sessions_in_calendar_bounds(calendar):
+    """Return sessions from the calendar's valid first session to last session.
+
+    This prevents DateOutOfBounds when the requested start date is a weekend
+    or holiday and the first valid session is later than the requested start.
+    """
+    try:
+        first_session = pd.Timestamp(calendar.first_session).tz_localize(None).normalize()
+        last_session = pd.Timestamp(calendar.last_session).tz_localize(None).normalize()
+
+        if first_session > last_session:
+            return pd.DatetimeIndex([])
+
+        return calendar.sessions_in_range(first_session, last_session)
+
+    except Exception as e:
+        print(f"  Warning: failed to read sessions from calendar bounds: {e}")
+        return pd.DatetimeIndex([])
+
+
 def main():
     args = parse_args()
 
     today_utc = datetime.now(timezone.utc).date()
-    start_date = datetime.strptime(args.start, "%Y-%m-%d").date() if args.start else today_utc
+
+    start_date = (
+        datetime.strptime(args.start, "%Y-%m-%d").date()
+        if args.start
+        else today_utc
+    )
+
     end_date = (
         datetime.strptime(args.end, "%Y-%m-%d").date()
         if args.end
@@ -136,9 +164,12 @@ def main():
         code = info["exchange_calendar_code"]
         print(f"Processing {market_name} ({code})...")
 
+        cal = None
+
         # Some calendars have a recorded-holidays upper bound; clamp end date if needed.
         cal_class = xcals.calendar_utils.global_calendar_dispatcher._calendar_factories[code]
         cal_end = end_ts
+
         try:
             bound_max = pd.Timestamp(cal_class.bound_max())
             if cal_end > bound_max:
@@ -147,20 +178,29 @@ def main():
         except Exception:
             pass
 
-        cal = xcals.get_calendar(code, start=start_ts, end=cal_end)
+        try:
+            cal = xcals.get_calendar(code, start=start_ts, end=cal_end)
+            sessions_in_range = get_sessions_in_calendar_bounds(cal)
+        except Exception as e:
+            print(f"  Warning: failed to load calendar {market_name} ({code}): {e}")
+            sessions_in_range = pd.DatetimeIndex([])
 
-        sessions_in_range = cal.sessions_in_range(start_ts, cal_end)
         sessions_set = {s.strftime("%Y-%m-%d") for s in sessions_in_range}
         sessions_list = sorted(sessions_set)
 
-        # Weekdays (Mon-Fri) with no trading session = holidays or observed closures
+        # Weekdays (Mon-Fri) with no trading session = holidays or observed closures.
         business_days = pd.date_range(start=start_ts, end=cal_end, freq="B")
         holidays_or_closed = sorted(
-            d.strftime("%Y-%m-%d") for d in business_days
+            d.strftime("%Y-%m-%d")
+            for d in business_days
             if d.strftime("%Y-%m-%d") not in sessions_set
         )
 
-        special_opens, special_closes = get_special_times(cal, sessions_set)
+        special_opens, special_closes = (
+            get_special_times(cal, sessions_set)
+            if cal is not None
+            else ({}, {})
+        )
 
         output["markets"][market_name] = {
             "exchange_calendar_code": code,
@@ -173,7 +213,9 @@ def main():
         }
 
     os.makedirs("docs", exist_ok=True)
+
     output_path = os.path.join("docs", "market_calendar.json")
+
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, sort_keys=True, ensure_ascii=False)
 
