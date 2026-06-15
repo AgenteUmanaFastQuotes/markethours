@@ -17,30 +17,45 @@ MARKETS = {
         "exchange_calendar_code": "XTKS",
         "timezone": "Asia/Tokyo",
     },
-    "Shanghai": {
-        "label": "Shanghai Stock Exchange",
-        "exchange_calendar_code": "XSHG",
-        "timezone": "Asia/Shanghai",
+    "Korea": {
+        "label": "Korea Exchange",
+        "exchange_calendar_code": "XKRX",
+        "timezone": "Asia/Seoul",
     },
     "Taiwan": {
         "label": "Taiwan Stock Exchange",
         "exchange_calendar_code": "XTAI",
         "timezone": "Asia/Taipei",
     },
-    "Korea": {
-        "label": "Korea Exchange",
-        "exchange_calendar_code": "XKRX",
-        "timezone": "Asia/Seoul",
+    "Singapore": {
+        "label": "Singapore Exchange",
+        "exchange_calendar_code": "XSES",
+        "timezone": "Asia/Singapore",
+    },
+    "Shanghai": {
+        "label": "Shanghai Stock Exchange",
+        "exchange_calendar_code": "XSHG",
+        "timezone": "Asia/Shanghai",
     },
     "Hong Kong": {
         "label": "Hong Kong Stock Exchange",
         "exchange_calendar_code": "XHKG",
         "timezone": "Asia/Hong_Kong",
     },
+    "Philippines": {
+        "label": "Philippine Stock Exchange",
+        "exchange_calendar_code": "XPHS",
+        "timezone": "Asia/Manila",
+    },
     "India": {
         "label": "Bombay Stock Exchange",
         "exchange_calendar_code": "XBOM",
         "timezone": "Asia/Kolkata",
+    },
+    "Frankfurt": {
+        "label": "Frankfurt Stock Exchange",
+        "exchange_calendar_code": "XFRA",
+        "timezone": "Europe/Berlin",
     },
     "London": {
         "label": "London Stock Exchange",
