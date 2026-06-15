@@ -776,11 +776,6 @@
 
     function getOrderedMarkets(now) {
       return state.markets.slice().sort(function(a, b) {
-        var sa = computeMarketStatus(a, now).sortMs;
-        var sb = computeMarketStatus(b, now).sortMs;
-
-        if (sa !== sb) return sa - sb;
-
         return Number(a.sortOrder || 999) - Number(b.sortOrder || 999);
       });
     }
