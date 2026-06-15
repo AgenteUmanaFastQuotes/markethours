@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DARKNYTE CLUB - SESSIONS</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #08090c;
+      --panel: #11131a;
+      --panel-2: #171a23;
+      --border: #272b36;
+      --text: #f4f4f5;
+      --muted: #9ca3af;
+      --green: #20c997;
+      --red: #ff3b30;
+      --amber: #ffcc00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #171a23 0, #08090c 42%, #050509 100%);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .wrap {
+      width: min(1500px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 32px 0;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-family: "Ethnocentric", "Orbitron", "Rajdhani", Arial, Helvetica, sans-serif;
+      font-size: 30px;
+      letter-spacing: 0.14em;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .title-block p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clock {
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .clock strong {
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    .sound-toggle {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+
+    .sound-toggle.active {
+      color: var(--green);
+      border-color: rgba(32,201,151,0.45);
+      background: rgba(32,201,151,0.12);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      min-height: 230px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .market {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      margin: 0;
+    }
+
+    .exchange {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+    }
+
+    .badge.open {
+      color: var(--green);
+      border-color: rgba(32,201,151,0.35);
+      background: rgba(32,201,151,0.10);
+    }
+
+    .badge.closed {
+      color: var(--red);
+      border-color: rgba(255,59,48,0.35);
+      background: rgba(255,59,48,0.10);
+    }
+
+    .middle { margin-top: 24px; }
+
+    .countdown-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .countdown {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      color: var(--red);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown.open { color: var(--green); }
+
+    .meta {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding-top: 8px;
+    }
+
+    .meta-row span:last-child {
+      color: var(--text);
+      text-align: right;
+      font-weight: 800;
+    }
+
+    .footer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .error {
+      border: 1px solid rgba(255,59,48,0.35);
+      background: rgba(255,59,48,0.08);
+      color: #ffd0cc;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    @media (max-width: 1200px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .wrap {
+        width: min(100vw - 24px, 1500px);
+        padding: 20px 0;
+      }
+
+      .header { display: block; }
+      .clock { margin-top: 12px; text-align: left; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="header">
+      <div class="title-block">
+        <h1>DARKNYTE CLUB - SESSIONS</h1>
+        <p>Tokyo, Coreia, Taiwan, Singapura, Xangai, Hong Kong, Filipinas, Índia, Frankfurt, Londres e Nova York</p>
+      </div>
+
+      <div class="clock">
+        <div>Agora no Brasil</div>
+        <strong id="brClock">--:--:--</strong>
+        <div id="dataInfo">Carregando mercados...</div>
+        <button id="soundButton" class="sound-toggle" type="button">Ativar som</button>
+      </div>
+    </section>
+
+    <div id="errorBox" class="error"></div>
+    <section id="grid" class="grid"></section>
+
+    <section class="footer">
+      <div>Fonte-base: Code.gs + market_calendar.json quando disponível</div>
+      <div id="updatedAt">--</div>
+    </section>
+  </main>
+
+  <script>
+    var JSON_URL = "https://agenteumanafastquotes.github.io/markethours/market_calendar.json";
+
+    var DEFAULT_MARKETS = [
+      {
+        id: "tokyo",
+        jsonName: "Tokyo",
+        name: "Tokyo",
+        exchange: "JPX / TSE",
+        timezone: "Asia/Tokyo",
+        sessions: [["09:00", "11:30"], ["12:30", "15:30"]],
+        source: "JPX",
+        sortOrder: 10
+      },
+      {
+        id: "korea",
+        jsonName: "Korea",
+        name: "Coreia",
+        exchange: "KRX",
+        timezone: "Asia/Seoul",
+        sessions: [["09:00", "15:30"]],
+        source: "KRX",
+        sortOrder: 20
+      },
+      {
+        id: "taiwan",
+        jsonName: "Taiwan",
+        name: "Taiwan",
+        exchange: "TWSE",
+        timezone: "Asia/Taipei",
+        sessions: [["09:00", "13:30"]],
+        source: "TWSE",
+        sortOrder: 30
+      },
+      {
+        id: "singapore",
+        jsonName: "Singapore",
+        name: "Singapura",
+        exchange: "Singapore Exchange",
+        timezone: "Asia/Singapore",
+        sessions: [["09:00", "12:00"], ["13:00", "17:00"]],
+        source: "SGX",
+        sortOrder: 40
+      },
+      {
+        id: "shanghai",
+        jsonName: "Shanghai",
+        name: "Xangai",
+        exchange: "Shanghai Stock Exchange",
+        timezone: "Asia/Shanghai",
+        sessions: [["09:30", "11:30"], ["13:00", "15:00"]],
+        source: "SSE",
+        sortOrder: 50
+      },
+      {
+        id: "hongkong",
+        jsonName: "Hong Kong",
+        name: "Hong Kong",
+        exchange: "HKEX",
+        timezone: "Asia/Hong_Kong",
+        sessions: [["09:30", "12:00"], ["13:00", "16:00"]],
+        source: "HKEX",
+        sortOrder: 60
+      },
+      {
+        id: "philippines",
+        jsonName: "Philippines",
+        name: "Filipinas",
+        exchange: "Philippine Stock Exchange",
+        timezone: "Asia/Manila",
+        sessions: [["09:30", "12:00"], ["13:00", "15:15"]],
+        source: "PSE",
+        sortOrder: 70
+      },
+      {
+        id: "india",
+        jsonName: "India",
+        name: "Índia",
+        exchange: "NSE",
+        timezone: "Asia/Kolkata",
+        sessions: [["09:15", "15:30"]],
+        source: "NSE",
+        sortOrder: 80
+      },
+      {
+        id: "frankfurt",
+        jsonName: "Frankfurt",
+        name: "Frankfurt",
+        exchange: "Frankfurt / Xetra",
+        timezone: "Europe/Berlin",
+        sessions: [["08:00", "22:00"]],
+        source: "XETRA",
+        sortOrder: 90
+      },
+      {
+        id: "london",
+        jsonName: "London",
+        name: "Londres",
+        exchange: "LSE",
+        timezone: "Europe/London",
+        sessions: [["08:00", "16:30"]],
+        source: "LSE",
+        sortOrder: 100
+      },
+      {
+        id: "newyork",
+        jsonName: "New York",
+        name: "Nova York",
+        exchange: "NYSE",
+        timezone: "America/New_York",
+        sessions: [["09:30", "16:00"]],
+        source: "NYSE",
+        sortOrder: 110
+      }
+    ];
+
+    var state = {
+      markets: [],
+      cards: {},
+      calendar: null,
+      audioCtx: null,
+      audioEnabled: false,
+      playedAlerts: {}
+    };
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function normalizeTime(value) {
+      var raw = String(value || "00:00").trim();
+      var p = raw.split(":");
+
+      return pad(Number(p[0] || 0)) + ":" + pad(Number(p[1] || 0)) + ":" + pad(Number(p[2] || 0));
+    }
+
+    function formatSessions(market) {
+      return (market.sessions || [])
+        .map(function(session) {
+          return session[0] + "–" + session[1];
+        })
+        .join(" / ");
+    }
+
+    function formatDuration(ms) {
+      if (ms < 0) ms = 0;
+
+      var total = Math.floor(ms / 1000);
+      var days = Math.floor(total / 86400);
+      total -= days * 86400;
+
+      var hours = Math.floor(total / 3600);
+      total -= hours * 3600;
+
+      var minutes = Math.floor(total / 60);
+      var seconds = total - minutes * 60;
+
+      if (days > 0) {
+        return days + "d " + pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+      }
+
+      return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+    }
+
+    function formatDateBR(dateKey) {
+      if (!dateKey || String(dateKey).indexOf("-") < 0) return "—";
+
+      var p = String(dateKey).split("-");
+
+      return p[2] + "/" + p[1];
+    }
+
+    function getZonedParts(date, timeZone) {
+      var dtf = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+        hourCycle: "h23"
+      });
+
+      var parts = dtf.formatToParts(date);
+      var out = {};
+
+      for (var i = 0; i < parts.length; i++) {
+        out[parts[i].type] = parts[i].value;
+      }
+
+      var hour = out.hour === "24" ? "00" : out.hour;
+
+      return {
+        year: Number(out.year),
+        month: Number(out.month),
+        day: Number(out.day),
+        hour: Number(hour),
+        minute: Number(out.minute),
+        second: Number(out.second),
+        dateKey: out.year + "-" + out.month + "-" + out.day,
+        time: hour + ":" + out.minute + ":" + out.second
+      };
+    }
+
+    function zonedTimeToUtc(dateKey, timeString, timeZone) {
+      timeString = normalizeTime(timeString);
+
+      var d = dateKey.split("-");
+      var t = timeString.split(":");
+
+      var y = Number(d[0]);
+      var mo = Number(d[1]);
+      var da = Number(d[2]);
+      var h = Number(t[0]);
+      var mi = Number(t[1]);
+      var s = Number(t[2] || 0);
+
+      var utc = new Date(Date.UTC(y, mo - 1, da, h, mi, s));
+
+      for (var i = 0; i < 4; i++) {
+        var p = getZonedParts(utc, timeZone);
+        var asIfUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+        var targetUtc = Date.UTC(y, mo - 1, da, h, mi, s);
+        var diff = asIfUtc - targetUtc;
+
+        if (diff === 0) break;
+
+        utc = new Date(utc.getTime() - diff);
+      }
+
+      return utc;
+    }
+
+    function addDaysToDateKey(dateKey, days) {
+      var p = dateKey.split("-");
+      var d = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + days));
+
+      return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate());
+    }
+
+    function isWeekday(dateKey) {
+      var p = dateKey.split("-");
+      var d = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])));
+      var day = d.getUTCDay();
+
+      return day >= 1 && day <= 5;
+    }
+
+    function getClosedDates(market) {
+      var dates = [];
+
+      if (Array.isArray(market.holidays)) {
+        dates = dates.concat(market.holidays);
+      }
+
+      if (Array.isArray(market.holidays_or_closed_weekdays)) {
+        dates = dates.concat(market.holidays_or_closed_weekdays);
+      }
+
+      return dates
+        .filter(function(dateKey) {
+          return !!dateKey;
+        })
+        .sort();
+    }
+
+    function isClosedByHoliday(market, dateKey) {
+      var closedDates = getClosedDates(market);
+
+      return closedDates.indexOf(dateKey) >= 0;
+    }
+
+    function findNextHoliday(market, currentDateKey) {
+      var closedDates = getClosedDates(market);
+
+      for (var i = 0; i < closedDates.length; i++) {
+        if (closedDates[i] >= currentDateKey) {
+          return closedDates[i];
+        }
+      }
+
+      return null;
+    }
+
+    function getNextTradingDate(market, dateKey) {
+      var next = dateKey;
+
+      for (var i = 0; i < 20; i++) {
+        next = addDaysToDateKey(next, 1);
+
+        if (isWeekday(next) && !isClosedByHoliday(market, next)) {
+          return next;
+        }
+      }
+
+      return next;
+    }
+
+    function normalizeMarketId(market) {
+      if (market.id) return String(market.id).toLowerCase();
+
+      var name = String(market.name || market.label || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+      if (name.indexOf("tokyo") >= 0) return "tokyo";
+      if (name.indexOf("xangai") >= 0 || name.indexOf("shanghai") >= 0) return "shanghai";
+      if (name.indexOf("taiwan") >= 0) return "taiwan";
+      if (name.indexOf("coreia") >= 0 || name.indexOf("korea") >= 0) return "korea";
+      if (name.indexOf("hong") >= 0) return "hongkong";
+      if (name.indexOf("india") >= 0) return "india";
+      if (name.indexOf("singapura") >= 0 || name.indexOf("singapore") >= 0) return "singapore";
+      if (name.indexOf("filip") >= 0 || name.indexOf("philipp") >= 0) return "philippines";
+      if (name.indexOf("frankfurt") >= 0) return "frankfurt";
+      if (name.indexOf("londres") >= 0 || name.indexOf("london") >= 0) return "london";
+      if (name.indexOf("nova") >= 0 || name.indexOf("new") >= 0 || name.indexOf("york") >= 0) return "newyork";
+
+      return name.replace(/[^a-z0-9]+/g, "-");
+    }
+
+    function getJsonMarketByDefaultMarket(calendar, defaultMarket) {
+      if (!calendar || !calendar.markets) return null;
+
+      if (calendar.markets[defaultMarket.jsonName]) {
+        return calendar.markets[defaultMarket.jsonName];
+      }
+
+      if (calendar.markets[defaultMarket.name]) {
+        return calendar.markets[defaultMarket.name];
+      }
+
+      return null;
+    }
+
+    function mergeMarkets(serverMarkets, calendar) {
+      var byId = {};
+
+      for (var i = 0; i < DEFAULT_MARKETS.length; i++) {
+        var base = Object.assign({}, DEFAULT_MARKETS[i]);
+        var jsonMarket = getJsonMarketByDefaultMarket(calendar, base);
+
+        if (jsonMarket) {
+          base.timezone = jsonMarket.timezone || base.timezone;
+          base.exchange = jsonMarket.label || base.exchange;
+          base.source = jsonMarket.exchange_calendar_code || base.source;
+          base.exchange_calendar_code = jsonMarket.exchange_calendar_code || base.source;
+          base.holidays_or_closed_weekdays = jsonMarket.holidays_or_closed_weekdays || [];
+          base.special_opens = jsonMarket.special_opens || {};
+          base.special_closes = jsonMarket.special_closes || {};
+          base.json_sessions = jsonMarket.sessions || [];
+        }
+
+        byId[base.id] = base;
+      }
+
+      if (Array.isArray(serverMarkets)) {
+        for (var j = 0; j < serverMarkets.length; j++) {
+          var incoming = Object.assign({}, serverMarkets[j]);
+          var id = normalizeMarketId(incoming);
+
+          incoming.id = id;
+
+          if (byId[id]) {
+            byId[id] = Object.assign({}, byId[id], incoming);
+          } else {
+            incoming.sortOrder = 999;
+            byId[id] = incoming;
+          }
+        }
+      }
+
+      return Object.keys(byId)
+        .map(function(id) {
+          var market = byId[id];
+
+          market.id = id;
+          market.sessions = Array.isArray(market.sessions) ? market.sessions : [];
+          market.holidays = Array.isArray(market.holidays) ? market.holidays : [];
+          market.holidays_or_closed_weekdays = Array.isArray(market.holidays_or_closed_weekdays)
+            ? market.holidays_or_closed_weekdays
+            : [];
+          market.special_opens = market.special_opens || {};
+          market.special_closes = market.special_closes || {};
+
+          return market;
+        })
+        .filter(function(market) {
+          return market.name && market.timezone && market.sessions.length;
+        })
+        .sort(function(a, b) {
+          return Number(a.sortOrder || 999) - Number(b.sortOrder || 999);
+        });
+    }
+
+    function buildSegments(market, dateKey) {
+      var segments = [];
+      var base = market.sessions || [];
+
+      for (var i = 0; i < base.length; i++) {
+        segments.push([normalizeTime(base[i][0]), normalizeTime(base[i][1])]);
+      }
+
+      var specialOpen = market.special_opens && market.special_opens[dateKey];
+      var specialClose = market.special_closes && market.special_closes[dateKey];
+
+      if (segments.length && specialOpen) {
+        segments[0][0] = normalizeTime(specialOpen);
+      }
+
+      if (segments.length && specialClose) {
+        segments = [[segments[0][0], normalizeTime(specialClose)]];
+      }
+
+      return segments;
+    }
+
+    function computeMarketStatus(market, now) {
+      var tz = market.timezone;
+      var local = getZonedParts(now, tz);
+      var dateKey = local.dateKey;
+
+      var openNow = false;
+      var currentOpenUtc = null;
+      var nextOpenUtc = null;
+      var countdownTargetUtc = null;
+      var countdownLabel = "ABRE EM";
+      var statusLabel = "Fechado";
+      var nextOpenLabel = "";
+      var openAlertKey = "";
+
+      var canTradeToday = isWeekday(dateKey) && !isClosedByHoliday(market, dateKey);
+
+      if (canTradeToday) {
+        var segments = buildSegments(market, dateKey);
+
+        for (var i = 0; i < segments.length; i++) {
+          var openUtc = zonedTimeToUtc(dateKey, segments[i][0], tz);
+          var closeUtc = zonedTimeToUtc(dateKey, segments[i][1], tz);
+
+          if (now >= openUtc && now < closeUtc) {
+            openNow = true;
+            currentOpenUtc = openUtc;
+            countdownTargetUtc = closeUtc;
+            countdownLabel = "FECHA EM";
+            statusLabel = "Aberto agora";
+            break;
+          }
+
+          if (now < openUtc && nextOpenUtc === null) {
+            nextOpenUtc = openUtc;
+            countdownTargetUtc = openUtc;
+            countdownLabel = "ABRE EM";
+            nextOpenLabel = dateKey + " " + segments[i][0];
+            break;
+          }
+        }
+      }
+
+      if (!openNow && countdownTargetUtc === null) {
+        var nextDateKey = getNextTradingDate(market, dateKey);
+        var nextSegments = buildSegments(market, nextDateKey);
+
+        nextOpenUtc = zonedTimeToUtc(nextDateKey, nextSegments[0][0], tz);
+        countdownTargetUtc = nextOpenUtc;
+        countdownLabel = "ABRE EM";
+        nextOpenLabel = nextDateKey + " " + nextSegments[0][0];
+      }
+
+      var countdownMs = countdownTargetUtc ? countdownTargetUtc.getTime() - now.getTime() : 0;
+      var nextHoliday = findNextHoliday(market, dateKey);
+
+      if (!openNow && countdownLabel === "ABRE EM" && nextOpenLabel) {
+        openAlertKey = market.name + "|" + nextOpenLabel;
+      }
+
+      return {
+        marketName: market.name,
+        exchange: market.exchange,
+        source: market.source,
+        timezone: tz,
+        openNow: openNow,
+        statusLabel: statusLabel,
+        localTime: local.time,
+        nextHoliday: formatDateBR(nextHoliday),
+        countdownLabel: countdownLabel,
+        countdown: countdownTargetUtc ? formatDuration(countdownMs) : "—",
+        countdownMs: countdownMs,
+        openAlertKey: openAlertKey,
+        currentOpenUtc: currentOpenUtc,
+        nextOpenUtc: nextOpenUtc,
+        sortMs: currentOpenUtc
+          ? currentOpenUtc.getTime()
+          : nextOpenUtc
+            ? nextOpenUtc.getTime()
+            : Number.MAX_SAFE_INTEGER
+      };
+    }
+
+    function getOrderedMarkets(now) {
+      return state.markets.slice().sort(function(a, b) {
+        var sa = computeMarketStatus(a, now).sortMs;
+        var sb = computeMarketStatus(b, now).sortMs;
+
+        if (sa !== sb) return sa - sb;
+
+        return Number(a.sortOrder || 999) - Number(b.sortOrder || 999);
+      });
+    }
+
+    function enableSound() {
+      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        showError("Este navegador não suporta áudio via Web Audio API.");
+        return;
+      }
+
+      if (!state.audioCtx) {
+        state.audioCtx = new AudioContextClass();
+      }
+
+      if (state.audioCtx.state === "suspended") {
+        state.audioCtx.resume();
+      }
+
+      state.audioEnabled = true;
+
+      var btn = document.getElementById("soundButton");
+
+      if (btn) {
+        btn.textContent = "Som ativo";
+        btn.className = "sound-toggle active";
+      }
+
+      playOpeningGong();
+    }
+
+    function playTone(freq, startOffset, duration, type, gainValue) {
+      if (!state.audioCtx || !state.audioEnabled) return;
+
+      var ctx = state.audioCtx;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + startOffset);
+      gain.gain.exponentialRampToValueAtTime(gainValue || 0.18, ctx.currentTime + startOffset + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startOffset + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime + startOffset);
+      osc.stop(ctx.currentTime + startOffset + duration + 0.04);
+    }
+
+    function playOpeningGong() {
+      playTone(196, 0.00, 0.90, "sine", 0.24);
+      playTone(392, 0.02, 0.55, "sine", 0.10);
+      playTone(588, 0.04, 0.30, "sine", 0.05);
+    }
+
+    function maybePlayOpenAlert(status) {
+      if (!state.audioEnabled) return;
+      if (!status || !status.openAlertKey) return;
+      if (status.openNow) return;
+      if (status.countdownLabel !== "ABRE EM") return;
+
+      if (status.countdownMs > 0 && status.countdownMs <= 5000) {
+        var secondsLeft = Math.ceil(status.countdownMs / 1000);
+        var alertKey = status.openAlertKey + "|T-" + secondsLeft;
+
+        if (!state.playedAlerts[alertKey]) {
+          state.playedAlerts[alertKey] = true;
+          playOpeningGong();
+        }
+      }
+    }
+
+    function createCard(market) {
+      var el = document.createElement("article");
+      el.className = "card";
+      el.id = "card-" + market.id;
+
+      el.innerHTML =
+        '<div>' +
+          '<div class="top">' +
+            '<div>' +
+              '<h2 class="market">' + escapeHtml(market.name) + '</h2>' +
+              '<div class="exchange">' + escapeHtml(market.exchange) + '<br>' + escapeHtml(market.source) + '</div>' +
+            '</div>' +
+            '<div class="badge">--</div>' +
+          '</div>' +
+          '<div class="middle">' +
+            '<div class="countdown-label">--</div>' +
+            '<div class="countdown">--:--:--</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="meta">' +
+          '<div class="meta-row"><span>Horário local</span><span class="local-time">--:--:--</span></div>' +
+          '<div class="meta-row"><span>Próximo feriado</span><span class="next-holiday">--</span></div>' +
+          '<div class="meta-row"><span>Sessões</span><span>' + escapeHtml(formatSessions(market)) + '</span></div>' +
+          '<div class="meta-row"><span>Fonte-base</span><span>' + escapeHtml(market.source) + ' | ' + escapeHtml(market.timezone) + '</span></div>' +
+        '</div>';
+
+      return el;
+    }
+
+    function renderBase() {
+      var grid = document.getElementById("grid");
+
+      grid.innerHTML = "";
+      state.cards = {};
+
+      var orderedMarkets = getOrderedMarkets(new Date());
+
+      for (var i = 0; i < orderedMarkets.length; i++) {
+        var market = orderedMarkets[i];
+        var card = createCard(market);
+
+        grid.appendChild(card);
+        state.cards[market.id] = card;
+      }
+
+      document.getElementById("dataInfo").textContent = "Mercados carregados: " + state.markets.length;
+
+      if (state.calendar && state.calendar.generated_at_utc) {
+        document.getElementById("updatedAt").textContent = "Calendário UTC: " + state.calendar.generated_at_utc;
+      } else {
+        document.getElementById("updatedAt").textContent = "Calendário externo indisponível; usando fallback local";
+      }
+    }
+
+    function updateCards() {
+      if (!state.markets || !state.markets.length) return;
+
+      var now = new Date();
+      var grid = document.getElementById("grid");
+      var orderedMarkets = getOrderedMarkets(now);
+
+      document.getElementById("brClock").textContent =
+        new Intl.DateTimeFormat("pt-BR", {
+          timeZone: "America/Sao_Paulo",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        }).format(now);
+
+      for (var i = 0; i < orderedMarkets.length; i++) {
+        var market = orderedMarkets[i];
+        var card = state.cards[market.id];
+
+        if (!card) continue;
+
+        grid.appendChild(card);
+
+        var status = computeMarketStatus(market, now);
+        var badge = card.querySelector(".badge");
+        var countdown = card.querySelector(".countdown");
+
+        badge.textContent = status.statusLabel;
+        badge.className = "badge " + (status.openNow ? "open" : "closed");
+
+        card.querySelector(".countdown-label").textContent = status.countdownLabel;
+
+        countdown.textContent = status.countdown;
+        countdown.className = "countdown " + (status.openNow ? "open" : "");
+
+        card.querySelector(".local-time").textContent = status.localTime;
+        card.querySelector(".next-holiday").textContent = status.nextHoliday;
+
+        maybePlayOpenAlert(status);
+      }
+    }
+
+    function showError(message) {
+      var box = document.getElementById("errorBox");
+
+      box.style.display = "block";
+      box.textContent = message;
+    }
+
+    function startWithMarkets(serverMarkets, calendar) {
+      state.calendar = calendar || null;
+      state.markets = mergeMarkets(serverMarkets, state.calendar);
+
+      renderBase();
+      updateCards();
+
+      window.setInterval(updateCards, 1000);
+    }
+
+    function loadCalendar() {
+      return fetch(JSON_URL, { cache: "no-store" })
+        .then(function(res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .catch(function() {
+          return null;
+        });
+    }
+
+    function boot() {
+      var soundButton = document.getElementById("soundButton");
+
+      if (soundButton) {
+        soundButton.addEventListener("click", enableSound);
+      }
+
+      loadCalendar().then(function(calendar) {
+        if (
+          typeof google !== "undefined" &&
+          google.script &&
+          google.script.run
+        ) {
+          google.script.run
+            .withSuccessHandler(function(markets) {
+              startWithMarkets(markets, calendar);
+            })
+            .withFailureHandler(function(err) {
+              showError("Falha ao carregar getMarkets(). Usando fallback local.");
+              startWithMarkets(DEFAULT_MARKETS, calendar);
+            })
+            .getMarkets();
+        } else {
+          startWithMarkets(DEFAULT_MARKETS, calendar);
+        }
+      });
+    }
+
+    boot();
+  </script>
+</body>
+</html>
