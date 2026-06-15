@@ -42,6 +42,21 @@ MARKETS = {
         "exchange_calendar_code": "XBOM",
         "timezone": "Asia/Kolkata",
     },
+    "Singapore": {
+        "label": "Singapore Exchange",
+        "exchange_calendar_code": "XSES",
+        "timezone": "Asia/Singapore",
+    },
+    "Philippines": {
+        "label": "Philippine Stock Exchange",
+        "exchange_calendar_code": "XPHS",
+        "timezone": "Asia/Manila",
+    },
+    "Frankfurt": {
+        "label": "Frankfurt Stock Exchange",
+        "exchange_calendar_code": "XFRA",
+        "timezone": "Europe/Berlin",
+    },
     "London": {
         "label": "London Stock Exchange",
         "exchange_calendar_code": "XLON",
