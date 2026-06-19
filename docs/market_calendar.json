@@ -1,6 +1,6 @@
 {
-  "end_date": "2027-07-23",
-  "generated_at_utc": "2026-06-18T11:05:20.985072+00:00",
+  "end_date": "2027-07-24",
+  "generated_at_utc": "2026-06-19T11:14:42.289238+00:00",
   "markets": {
     "Frankfurt": {
       "exchange_calendar_code": "XFRA",
@@ -14,7 +14,6 @@
       ],
       "label": "Frankfurt Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -320,7 +319,6 @@
       ],
       "label": "Hong Kong Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -613,7 +611,6 @@
       ],
       "label": "Bombay Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -771,7 +768,6 @@
       ],
       "label": "Korea Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -1064,7 +1060,6 @@
       ],
       "label": "London Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -1366,7 +1361,6 @@
       ],
       "label": "New York Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -1666,7 +1660,6 @@
       ],
       "label": "Philippine Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -1957,7 +1950,6 @@
       ],
       "label": "Shanghai Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -2105,7 +2097,6 @@
       ],
       "label": "Singapore Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -2270,7 +2261,6 @@
       ],
       "label": "Taiwan Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -2571,7 +2561,6 @@
       ],
       "label": "Tokyo Stock Exchange",
       "sessions": [
-        "2026-06-18",
         "2026-06-19",
         "2026-06-22",
         "2026-06-23",
@@ -2845,6 +2834,6 @@
       "timezone": "Asia/Tokyo"
     }
   },
-  "start_date": "2026-06-18",
+  "start_date": "2026-06-19",
   "timezone_base": "UTC"
 }
