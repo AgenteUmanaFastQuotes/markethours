@@ -1,6 +1,6 @@
 {
-  "end_date": "2027-07-24",
-  "generated_at_utc": "2026-06-19T11:14:42.289238+00:00",
+  "end_date": "2027-07-25",
+  "generated_at_utc": "2026-06-20T09:57:45.261251+00:00",
   "markets": {
     "Frankfurt": {
       "exchange_calendar_code": "XFRA",
@@ -14,7 +14,6 @@
       ],
       "label": "Frankfurt Stock Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -302,7 +301,6 @@
     "Hong Kong": {
       "exchange_calendar_code": "XHKG",
       "holidays_or_closed_weekdays": [
-        "2026-06-19",
         "2026-07-01",
         "2026-10-01",
         "2026-10-19",
@@ -611,7 +609,6 @@
       ],
       "label": "Bombay Stock Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -768,7 +765,6 @@
       ],
       "label": "Korea Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -1060,7 +1056,6 @@
       ],
       "label": "London Stock Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -1346,7 +1341,6 @@
     "New York": {
       "exchange_calendar_code": "XNYS",
       "holidays_or_closed_weekdays": [
-        "2026-06-19",
         "2026-07-03",
         "2026-09-07",
         "2026-11-26",
@@ -1660,7 +1654,6 @@
       ],
       "label": "Philippine Stock Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -1940,7 +1933,6 @@
     "Shanghai": {
       "exchange_calendar_code": "XSHG",
       "holidays_or_closed_weekdays": [
-        "2026-06-19",
         "2026-09-25",
         "2026-10-01",
         "2026-10-02",
@@ -2097,7 +2089,6 @@
       ],
       "label": "Singapore Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -2242,7 +2233,6 @@
     "Taiwan": {
       "exchange_calendar_code": "XTAI",
       "holidays_or_closed_weekdays": [
-        "2026-06-19",
         "2026-09-25",
         "2026-09-28",
         "2026-10-09",
@@ -2561,7 +2551,6 @@
       ],
       "label": "Tokyo Stock Exchange",
       "sessions": [
-        "2026-06-19",
         "2026-06-22",
         "2026-06-23",
         "2026-06-24",
@@ -2834,6 +2823,6 @@
       "timezone": "Asia/Tokyo"
     }
   },
-  "start_date": "2026-06-19",
+  "start_date": "2026-06-20",
   "timezone_base": "UTC"
 }
