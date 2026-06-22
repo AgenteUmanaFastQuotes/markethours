@@ -387,6 +387,7 @@
       calendar: null,
       audioCtx: null,
       audioEnabled: false,
+      audioReady: false,
       playedAlerts: {}
     };
 
@@ -780,6 +781,15 @@
       });
     }
 
+    function setSoundButton(active) {
+      var btn = document.getElementById("soundButton");
+
+      if (!btn) return;
+
+      btn.textContent = active ? "Som ativo" : "Ativar som";
+      btn.className = active ? "sound-toggle active" : "sound-toggle";
+    }
+
     function enableSound() {
       var AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
@@ -792,24 +802,35 @@
         state.audioCtx = new AudioContextClass();
       }
 
-      if (state.audioCtx.state === "suspended") {
-        state.audioCtx.resume();
-      }
+      var resumePromise = state.audioCtx.state === "suspended"
+        ? state.audioCtx.resume()
+        : Promise.resolve();
 
-      state.audioEnabled = true;
+      Promise.resolve(resumePromise)
+        .then(function() {
+          state.audioEnabled = true;
+          state.audioReady = state.audioCtx.state === "running";
+          setSoundButton(state.audioReady);
 
-      var btn = document.getElementById("soundButton");
+          if (!state.audioReady) {
+            showError("O navegador ainda bloqueou o áudio. Clique em Ativar som novamente.");
+            return;
+          }
 
-      if (btn) {
-        btn.textContent = "Som ativo";
-        btn.className = "sound-toggle active";
-      }
-
-      playOpeningGong();
+          playOpeningGong();
+          updateCards();
+        })
+        .catch(function() {
+          state.audioEnabled = false;
+          state.audioReady = false;
+          setSoundButton(false);
+          showError("Não foi possível ativar o áudio. Verifique a permissão de som do navegador.");
+        });
     }
 
     function playTone(freq, startOffset, duration, type, gainValue) {
-      if (!state.audioCtx || !state.audioEnabled) return;
+      if (!state.audioCtx || !state.audioEnabled || !state.audioReady) return;
+      if (state.audioCtx.state !== "running") return;
 
       var ctx = state.audioCtx;
       var osc = ctx.createOscillator();
@@ -835,20 +856,33 @@
       playTone(588, 0.04, 0.30, "sine", 0.05);
     }
 
+    function playAlertOnce(alertKey) {
+      if (!alertKey || state.playedAlerts[alertKey]) return;
+
+      state.playedAlerts[alertKey] = true;
+      playOpeningGong();
+    }
+
     function maybePlayOpenAlert(status) {
-      if (!state.audioEnabled) return;
-      if (!status || !status.openAlertKey) return;
-      if (status.openNow) return;
+      if (!state.audioEnabled || !state.audioReady) return;
+      if (!status) return;
+
+      if (status.openNow && status.currentOpenUtc) {
+        var msSinceOpen = Date.now() - status.currentOpenUtc.getTime();
+
+        if (msSinceOpen >= 0 && msSinceOpen <= 3000) {
+          playAlertOnce(status.marketName + "|OPEN|" + status.currentOpenUtc.toISOString());
+        }
+
+        return;
+      }
+
+      if (!status.openAlertKey) return;
       if (status.countdownLabel !== "ABRE EM") return;
 
       if (status.countdownMs > 0 && status.countdownMs <= 5000) {
         var secondsLeft = Math.ceil(status.countdownMs / 1000);
-        var alertKey = status.openAlertKey + "|T-" + secondsLeft;
-
-        if (!state.playedAlerts[alertKey]) {
-          state.playedAlerts[alertKey] = true;
-          playOpeningGong();
-        }
+        playAlertOnce(status.openAlertKey + "|T-" + secondsLeft);
       }
     }
 
