@@ -1,6 +1,6 @@
 {
-  "end_date": "2027-08-07",
-  "generated_at_utc": "2026-07-03T09:49:49.952464+00:00",
+  "end_date": "2027-08-08",
+  "generated_at_utc": "2026-07-04T09:14:00.391501+00:00",
   "markets": {
     "Frankfurt": {
       "exchange_calendar_code": "XFRA",
@@ -14,7 +14,6 @@
       ],
       "label": "Frankfurt Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -317,7 +316,6 @@
       ],
       "label": "Hong Kong Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -610,7 +608,6 @@
       ],
       "label": "Bombay Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -758,7 +755,6 @@
       ],
       "label": "Korea Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -1050,7 +1046,6 @@
       ],
       "label": "London Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -1336,7 +1331,6 @@
     "New York": {
       "exchange_calendar_code": "XNYS",
       "holidays_or_closed_weekdays": [
-        "2026-07-03",
         "2026-09-07",
         "2026-11-26",
         "2026-12-25",
@@ -1650,7 +1644,6 @@
       ],
       "label": "Philippine Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -1939,7 +1932,6 @@
       ],
       "label": "Shanghai Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -2077,7 +2069,6 @@
       ],
       "label": "Singapore Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -2230,7 +2221,6 @@
       ],
       "label": "Taiwan Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -2531,7 +2521,6 @@
       ],
       "label": "Tokyo Stock Exchange",
       "sessions": [
-        "2026-07-03",
         "2026-07-06",
         "2026-07-07",
         "2026-07-08",
@@ -2804,6 +2793,6 @@
       "timezone": "Asia/Tokyo"
     }
   },
-  "start_date": "2026-07-03",
+  "start_date": "2026-07-04",
   "timezone_base": "UTC"
 }
