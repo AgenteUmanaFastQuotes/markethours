@@ -109,6 +109,32 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      position: relative;
+    }
+
+    .card.just-opened::after {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border-radius: 24px;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+      animation: halo-pulse 3.3s ease-in-out 3;
+      opacity: 0;
+    }
+
+    @keyframes halo-pulse {
+      0%   { opacity: 0; }
+      20%  { opacity: 1; }
+      50%  { opacity: 0.6; }
+      100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card.just-opened::after {
+        animation: none;
+        opacity: 0.15;
+      }
     }
 
     .top {
@@ -388,7 +414,12 @@
       audioCtx: null,
       audioEnabled: false,
       audioReady: false,
-      playedAlerts: {}
+      playedAlerts: {},
+      pendingAlerts: {},
+      masterGain: null,
+      compressor: null,
+      recoveryHooked: false,
+      intervalId: null
     };
 
     function pad(n) {
@@ -700,12 +731,13 @@
 
       var openNow = false;
       var currentOpenUtc = null;
+      var currentSegmentOpen = null;
       var nextOpenUtc = null;
       var countdownTargetUtc = null;
       var countdownLabel = "ABRE EM";
       var statusLabel = "Fechado";
       var nextOpenLabel = "";
-      var openAlertKey = "";
+      var sessionOpenKey = "";
 
       var canTradeToday = isWeekday(dateKey) && !isClosedByHoliday(market, dateKey);
 
@@ -719,9 +751,11 @@
           if (now >= openUtc && now < closeUtc) {
             openNow = true;
             currentOpenUtc = openUtc;
+            currentSegmentOpen = segments[i][0];
             countdownTargetUtc = closeUtc;
             countdownLabel = "FECHA EM";
             statusLabel = "Aberto agora";
+            sessionOpenKey = market.id + "|" + dateKey + "|" + segments[i][0];
             break;
           }
 
@@ -748,12 +782,9 @@
       var countdownMs = countdownTargetUtc ? countdownTargetUtc.getTime() - now.getTime() : 0;
       var nextHoliday = findNextHoliday(market, dateKey);
 
-      if (!openNow && countdownLabel === "ABRE EM" && nextOpenLabel) {
-        openAlertKey = market.name + "|" + nextOpenLabel;
-      }
-
       return {
         marketName: market.name,
+        marketId: market.id,
         exchange: market.exchange,
         source: market.source,
         timezone: tz,
@@ -764,8 +795,8 @@
         countdownLabel: countdownLabel,
         countdown: countdownTargetUtc ? formatDuration(countdownMs) : "—",
         countdownMs: countdownMs,
-        openAlertKey: openAlertKey,
         currentOpenUtc: currentOpenUtc,
+        sessionOpenKey: sessionOpenKey,
         nextOpenUtc: nextOpenUtc,
         sortMs: currentOpenUtc
           ? currentOpenUtc.getTime()
@@ -788,6 +819,25 @@
 
       btn.textContent = active ? "Som ativo" : "Ativar som";
       btn.className = active ? "sound-toggle active" : "sound-toggle";
+    }
+
+    function ensureAudioChain() {
+      if (!state.audioCtx) return;
+      if (state.masterGain && state.compressor) return;
+
+      var ctx = state.audioCtx;
+
+      state.compressor = ctx.createDynamicsCompressor();
+      state.compressor.threshold.setValueAtTime(-24, ctx.currentTime);
+      state.compressor.knee.setValueAtTime(12, ctx.currentTime);
+      state.compressor.ratio.setValueAtTime(4, ctx.currentTime);
+      state.compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      state.compressor.release.setValueAtTime(0.15, ctx.currentTime);
+      state.compressor.connect(ctx.destination);
+
+      state.masterGain = ctx.createGain();
+      state.masterGain.gain.setValueAtTime(0.85, ctx.currentTime);
+      state.masterGain.connect(state.compressor);
     }
 
     function enableSound() {
@@ -817,7 +867,9 @@
             return;
           }
 
+          ensureAudioChain();
           playOpeningGong();
+          installRecoveryHooks();
           updateCards();
         })
         .catch(function() {
@@ -829,10 +881,10 @@
     }
 
     function playTone(freq, startOffset, duration, type, gainValue) {
-      if (!state.audioCtx || !state.audioEnabled || !state.audioReady) return;
-      if (state.audioCtx.state !== "running") return;
-
       var ctx = state.audioCtx;
+
+      if (!ctx || ctx.state !== "running" || !state.masterGain) return false;
+
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
 
@@ -840,50 +892,126 @@
       osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
 
       gain.gain.setValueAtTime(0.0001, ctx.currentTime + startOffset);
-      gain.gain.exponentialRampToValueAtTime(gainValue || 0.18, ctx.currentTime + startOffset + 0.025);
+      gain.gain.exponentialRampToValueAtTime(gainValue || 0.18, ctx.currentTime + startOffset + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startOffset + duration);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(state.masterGain);
 
       osc.start(ctx.currentTime + startOffset);
       osc.stop(ctx.currentTime + startOffset + duration + 0.04);
+
+      return true;
     }
 
     function playOpeningGong() {
-      playTone(196, 0.00, 0.90, "sine", 0.24);
-      playTone(392, 0.02, 0.55, "sine", 0.10);
-      playTone(588, 0.04, 0.30, "sine", 0.05);
+      var ok = true;
+      ok = playTone(196,  0.00, 1.20, "sine", 0.60) && ok;
+      ok = playTone(392,  0.01, 0.80, "sine", 0.50) && ok;
+      ok = playTone(588,  0.02, 0.50, "sine", 0.35) && ok;
+      ok = playTone(784,  0.03, 0.35, "sine", 0.20) && ok;
+      ok = playTone(294,  0.00, 1.00, "triangle", 0.15) && ok;
+      return ok;
     }
 
-    function playAlertOnce(alertKey) {
-      if (!alertKey || state.playedAlerts[alertKey]) return;
-
-      state.playedAlerts[alertKey] = true;
-      playOpeningGong();
-    }
-
-    function maybePlayOpenAlert(status) {
-      if (!state.audioEnabled || !state.audioReady) return;
-      if (!status) return;
-
-      if (status.openNow && status.currentOpenUtc) {
-        var msSinceOpen = Date.now() - status.currentOpenUtc.getTime();
-
-        if (msSinceOpen >= 0 && msSinceOpen <= 3000) {
-          playAlertOnce(status.marketName + "|OPEN|" + status.currentOpenUtc.toISOString());
-        }
-
+    function tryResumeAndPlay(sessionKey) {
+      if (!state.audioCtx || !state.audioEnabled) {
+        delete state.pendingAlerts[sessionKey];
         return;
       }
 
-      if (!status.openAlertKey) return;
-      if (status.countdownLabel !== "ABRE EM") return;
-
-      if (status.countdownMs > 0 && status.countdownMs <= 5000) {
-        var secondsLeft = Math.ceil(status.countdownMs / 1000);
-        playAlertOnce(status.openAlertKey + "|T-" + secondsLeft);
+      if (state.audioCtx.state === "running") {
+        ensureAudioChain();
+        if (playOpeningGong()) {
+          state.playedAlerts[sessionKey] = true;
+          prunePlayedAlerts();
+        }
+        delete state.pendingAlerts[sessionKey];
+        return;
       }
+
+      if (state.audioCtx.state === "suspended") {
+        state.audioCtx.resume()
+          .then(function() {
+            state.audioReady = state.audioCtx.state === "running";
+            setSoundButton(state.audioReady);
+            if (state.audioReady) {
+              ensureAudioChain();
+              if (playOpeningGong()) {
+                state.playedAlerts[sessionKey] = true;
+                prunePlayedAlerts();
+              }
+            }
+            delete state.pendingAlerts[sessionKey];
+          })
+          .catch(function() {
+            delete state.pendingAlerts[sessionKey];
+          });
+        return;
+      }
+
+      delete state.pendingAlerts[sessionKey];
+    }
+
+    function maybePlayOpenAlert(status) {
+      if (!state.audioEnabled) return;
+      if (!status || !status.openNow || !status.currentOpenUtc || !status.sessionOpenKey) return;
+
+      var msSinceOpen = Date.now() - status.currentOpenUtc.getTime();
+
+      if (msSinceOpen < 0 || msSinceOpen > 60000) return;
+      if (state.playedAlerts[status.sessionOpenKey]) return;
+      if (state.pendingAlerts[status.sessionOpenKey]) return;
+
+      state.pendingAlerts[status.sessionOpenKey] = true;
+      tryResumeAndPlay(status.sessionOpenKey);
+    }
+
+    function prunePlayedAlerts() {
+      var now = new Date();
+      var todayKeys = [];
+      var keys = Object.keys(state.playedAlerts);
+
+      for (var i = 0; i < keys.length; i++) {
+        var parts = keys[i].split("|");
+        if (parts.length >= 2) {
+          var dateStr = parts[1];
+          var diff = now - new Date(dateStr + "T00:00:00Z");
+          if (diff > 172800000) {
+            delete state.playedAlerts[keys[i]];
+          }
+        }
+      }
+    }
+
+    function installRecoveryHooks() {
+      if (state.recoveryHooked) return;
+      state.recoveryHooked = true;
+
+      function onRecovery() {
+        if (!state.audioEnabled || !state.audioCtx) return;
+
+        if (state.audioCtx.state === "suspended") {
+          state.audioCtx.resume()
+            .then(function() {
+              state.audioReady = state.audioCtx.state === "running";
+              setSoundButton(state.audioReady);
+              ensureAudioChain();
+              updateCards();
+            })
+            .catch(function() {});
+        } else if (state.audioCtx.state === "running") {
+          state.audioReady = true;
+          updateCards();
+        }
+      }
+
+      document.addEventListener("visibilitychange", function() {
+        if (!document.hidden) onRecovery();
+      });
+
+      window.addEventListener("focus", onRecovery);
+      window.addEventListener("pageshow", onRecovery);
     }
 
     function createCard(market) {
@@ -967,8 +1095,22 @@
         var badge = card.querySelector(".badge");
         var countdown = card.querySelector(".countdown");
 
-        badge.textContent = status.statusLabel;
-        badge.className = "badge " + (status.openNow ? "open" : "closed");
+        var msSinceOpen = (status.openNow && status.currentOpenUtc)
+          ? now.getTime() - status.currentOpenUtc.getTime()
+          : -1;
+        var isJustOpened = msSinceOpen >= 0 && msSinceOpen <= 10000;
+
+        if (isJustOpened) {
+          if (!card.classList.contains("just-opened")) {
+            card.classList.add("just-opened");
+          }
+          badge.textContent = "JUST OPENED";
+          badge.className = "badge open";
+        } else {
+          card.classList.remove("just-opened");
+          badge.textContent = status.statusLabel;
+          badge.className = "badge " + (status.openNow ? "open" : "closed");
+        }
 
         card.querySelector(".countdown-label").textContent = status.countdownLabel;
 
@@ -996,7 +1138,8 @@
       renderBase();
       updateCards();
 
-      window.setInterval(updateCards, 1000);
+      if (state.intervalId) clearInterval(state.intervalId);
+      state.intervalId = window.setInterval(updateCards, 1000);
     }
 
     function loadCalendar() {
