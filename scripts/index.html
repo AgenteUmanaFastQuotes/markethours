@@ -137,15 +137,6 @@
       }
     }
 
-    .badge.just-opened-badge {
-      color: #fff;
-      border-color: rgba(255,255,255,0.35);
-      background: rgba(255,255,255,0.13);
-      font-size: 10px;
-      padding: 5px 9px;
-      margin-left: 6px;
-    }
-
     .top {
       display: flex;
       justify-content: space-between;
@@ -424,6 +415,7 @@
       audioEnabled: false,
       audioReady: false,
       playedAlerts: {},
+      pendingAlerts: {},
       masterGain: null,
       compressor: null,
       recoveryHooked: false,
@@ -923,13 +915,18 @@
     }
 
     function tryResumeAndPlay(sessionKey) {
-      if (!state.audioCtx || !state.audioEnabled) return;
+      if (!state.audioCtx || !state.audioEnabled) {
+        delete state.pendingAlerts[sessionKey];
+        return;
+      }
 
       if (state.audioCtx.state === "running") {
         ensureAudioChain();
         if (playOpeningGong()) {
           state.playedAlerts[sessionKey] = true;
+          prunePlayedAlerts();
         }
+        delete state.pendingAlerts[sessionKey];
         return;
       }
 
@@ -942,11 +939,18 @@
               ensureAudioChain();
               if (playOpeningGong()) {
                 state.playedAlerts[sessionKey] = true;
+                prunePlayedAlerts();
               }
             }
+            delete state.pendingAlerts[sessionKey];
           })
-          .catch(function() {});
+          .catch(function() {
+            delete state.pendingAlerts[sessionKey];
+          });
+        return;
       }
+
+      delete state.pendingAlerts[sessionKey];
     }
 
     function maybePlayOpenAlert(status) {
@@ -957,7 +961,9 @@
 
       if (msSinceOpen < 0 || msSinceOpen > 60000) return;
       if (state.playedAlerts[status.sessionOpenKey]) return;
+      if (state.pendingAlerts[status.sessionOpenKey]) return;
 
+      state.pendingAlerts[status.sessionOpenKey] = true;
       tryResumeAndPlay(status.sessionOpenKey);
     }
 
@@ -1088,7 +1094,6 @@
         var status = computeMarketStatus(market, now);
         var badge = card.querySelector(".badge");
         var countdown = card.querySelector(".countdown");
-        var justOpenedBadge = card.querySelector(".just-opened-badge");
 
         var msSinceOpen = (status.openNow && status.currentOpenUtc)
           ? now.getTime() - status.currentOpenUtc.getTime()
@@ -1099,23 +1104,12 @@
           if (!card.classList.contains("just-opened")) {
             card.classList.add("just-opened");
           }
-          badge.textContent = status.statusLabel;
+          badge.textContent = "JUST OPENED";
           badge.className = "badge open";
-
-          if (!justOpenedBadge) {
-            justOpenedBadge = document.createElement("span");
-            justOpenedBadge.className = "badge just-opened-badge";
-            justOpenedBadge.textContent = "JUST OPENED";
-            badge.parentNode.appendChild(justOpenedBadge);
-          }
         } else {
           card.classList.remove("just-opened");
           badge.textContent = status.statusLabel;
           badge.className = "badge " + (status.openNow ? "open" : "closed");
-
-          if (justOpenedBadge) {
-            justOpenedBadge.parentNode.removeChild(justOpenedBadge);
-          }
         }
 
         card.querySelector(".countdown-label").textContent = status.countdownLabel;
@@ -1145,10 +1139,7 @@
       updateCards();
 
       if (state.intervalId) clearInterval(state.intervalId);
-      state.intervalId = window.setInterval(function() {
-        updateCards();
-        prunePlayedAlerts();
-      }, 1000);
+      state.intervalId = window.setInterval(updateCards, 1000);
     }
 
     function loadCalendar() {
