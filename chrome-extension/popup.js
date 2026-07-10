@@ -122,10 +122,75 @@ async function runAction(button, busyText, callback) {
   try {
     await callback();
   } catch (error) {
+    setStatus("error", "ERRO");
     setError(error.message);
   } finally {
     button.disabled = false;
     button.textContent = originalText;
+  }
+}
+
+async function testNotificationDirectly() {
+  const permission = await chrome.notifications.getPermissionLevel();
+  const now = new Date();
+  const notificationId = `market-hours:popup-test:${now.getTime()}`;
+  const iconUrl = chrome.runtime.getURL("icons/market-hours-128.png");
+
+  if (permission !== "granted") {
+    const diagnostic = {
+      at: now.toISOString(),
+      type: "popup-direct-notification-test",
+      ok: false,
+      permission,
+      error: `Notification permission is ${permission}`
+    };
+    await chrome.storage.local.set({ lastNotificationTest: diagnostic });
+    throw new Error(`Permissão de notificação: ${permission}`);
+  }
+
+  try {
+    const createdId = await chrome.notifications.create(notificationId, {
+      type: "basic",
+      iconUrl,
+      title: "MARKET HOURS",
+      message: "Teste de notificação concluído",
+      contextMessage: "Aberturas de mercado aparecerão desta forma.",
+      eventTime: now.getTime(),
+      priority: 2,
+      requireInteraction: Boolean(el.interactionToggle.checked),
+      silent: true
+    });
+
+    const activeNotifications = await chrome.notifications.getAll();
+    const diagnostic = {
+      at: now.toISOString(),
+      type: "popup-direct-notification-test",
+      ok: true,
+      permission,
+      notificationId: createdId,
+      activeInChrome: Boolean(activeNotifications[createdId]),
+      iconUrl
+    };
+
+    await chrome.storage.local.set({ lastNotificationTest: diagnostic });
+    setStatus("ok", "TESTE OK");
+    el.syncInfo.textContent = diagnostic.activeInChrome
+      ? "Teste OK: notificação criada e ativa no Chrome."
+      : "Teste enviado: o Chrome criou a notificação, mas ela não ficou ativa.";
+
+    return diagnostic;
+  } catch (error) {
+    const diagnostic = {
+      at: now.toISOString(),
+      type: "popup-direct-notification-test",
+      ok: false,
+      permission,
+      iconUrl,
+      error: error && error.message ? error.message : String(error)
+    };
+
+    await chrome.storage.local.set({ lastNotificationTest: diagnostic });
+    throw error;
   }
 }
 
@@ -138,7 +203,7 @@ el.testGongButton.addEventListener("click", () => {
 });
 
 el.testNotificationButton.addEventListener("click", () => {
-  runAction(el.testNotificationButton, "TESTANDO...", () => send("TEST_NOTIFICATION"));
+  runAction(el.testNotificationButton, "TESTANDO...", testNotificationDirectly);
 });
 
 el.refreshButton.addEventListener("click", () => {
