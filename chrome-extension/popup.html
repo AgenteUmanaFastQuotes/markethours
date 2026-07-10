@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Hours Alerts</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="panel">
+    <header class="header">
+      <div>
+        <div class="eyebrow">MARKET HOURS</div>
+        <h1>Alerts</h1>
+      </div>
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot"></span>
+        <span id="statusText">CARREGANDO</span>
+      </div>
+    </header>
+
+    <section class="next-card">
+      <div class="label">PRÓXIMA ABERTURA</div>
+      <div class="next-market" id="nextMarket">—</div>
+      <div class="next-time" id="nextTime">—</div>
+      <div class="next-meta" id="nextMeta">Aguardando calendário</div>
+    </section>
+
+    <section class="settings-card">
+      <label class="setting-row">
+        <div>
+          <div class="setting-title">Gong em background</div>
+          <div class="setting-copy">Toca mesmo com o dashboard fora de foco.</div>
+        </div>
+        <input id="soundToggle" type="checkbox">
+      </label>
+
+      <label class="setting-row">
+        <div>
+          <div class="setting-title">Notificação visual</div>
+          <div class="setting-copy">Mostra a abertura na central do sistema.</div>
+        </div>
+        <input id="notificationToggle" type="checkbox">
+      </label>
+
+      <label class="setting-row">
+        <div>
+          <div class="setting-title">Manter na tela</div>
+          <div class="setting-copy">Pede ao Chrome para manter a notificação visível.</div>
+        </div>
+        <input id="interactionToggle" type="checkbox">
+      </label>
+    </section>
+
+    <section class="actions">
+      <button id="testGongButton" type="button">TESTAR GONG</button>
+      <button id="testNotificationButton" type="button">TESTAR NOTIFICAÇÃO</button>
+      <button id="refreshButton" class="secondary" type="button">ATUALIZAR HORÁRIOS</button>
+    </section>
+
+    <footer class="footer">
+      <div id="scheduleInfo">—</div>
+      <div id="syncInfo">—</div>
+      <div id="errorInfo" class="error" hidden></div>
+    </footer>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
