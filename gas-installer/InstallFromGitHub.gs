@@ -10,20 +10,26 @@
 //   GAS   : index [HTML]
 //
 // PUBLIC ENTRY POINTS
+//   CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS()
 //   DRY_RUN_MARKET_HOURS_GAS_INSTALL()
 //   INSTALL_MARKET_HOURS_FROM_GITHUB()
-//   CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS()
+//
+// REQUIRED SCRIPT PROPERTY
+//   GITHUB_TOKEN — GitHub personal access token.
+//                  Missing/empty token blocks CHECK, DRY_RUN and INSTALL.
 //
 // OPTIONAL SCRIPT PROPERTIES
-//   MARKET_HOURS_TARGET_SCRIPT_ID  — target GAS Script ID.
-//                                    If omitted, targets this project.
-//   MARKET_HOURS_GITHUB_BRANCH     — branch/ref override. Default: main.
-//   GITHUB_TOKEN                   — optional for this public repo;
-//                                    useful to increase GitHub API limits.
+//   MARKET_HOURS_TARGET_SCRIPT_ID — target GAS Script ID.
+//                                   If omitted, targets this project.
+//   MARKET_HOURS_GITHUB_BRANCH    — branch/ref override. Default: main.
 //
 // REQUIRED INSTALLER OAUTH SCOPES
 //   https://www.googleapis.com/auth/script.projects
 //   https://www.googleapis.com/auth/script.external_request
+//
+// Every public entry point calls ScriptApp.requireScopes(...)
+// before any GitHub or Apps Script API operation. Missing consent
+// stops execution and triggers authorization from the Apps Script IDE.
 //
 // SAFETY RULE
 //   INSTALL is blocked unless GET /projects/{scriptId}/content succeeds.
@@ -37,7 +43,7 @@ var MARKET_HOURS_GAS_INSTALLER_CONFIG = {
   targetScriptIdProperty: 'MARKET_HOURS_TARGET_SCRIPT_ID',
   githubBranchProperty: 'MARKET_HOURS_GITHUB_BRANCH',
   githubTokenProperty: 'GITHUB_TOKEN',
-  userAgent: 'MarketHours-GAS-Installer/1.0',
+  userAgent: 'MarketHours-GAS-Installer/1.1',
 
   // GitHub path -> Apps Script file mapping.
   // Add future .gs/.html files here when the GAS app grows.
@@ -57,20 +63,13 @@ var MARKET_HOURS_GAS_REQUIRED_SCOPES_ = [
 
 // ── Public entry points ───────────────────────────────────────
 
-function DRY_RUN_MARKET_HOURS_GAS_INSTALL() {
-  return runMarketHoursGasInstaller_(true);
-}
-
-function INSTALL_MARKET_HOURS_FROM_GITHUB() {
-  return runMarketHoursGasInstaller_(false);
-}
-
 function CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS() {
-  var cfg = MARKET_HOURS_GAS_INSTALLER_CONFIG;
-  var props = PropertiesService.getScriptProperties();
+  var prerequisites = assertMarketHoursInstallerPrerequisites_();
+  var cfg = prerequisites.cfg;
+  var props = prerequisites.props;
   var scriptId = getMarketHoursTargetScriptId_(cfg, props);
   var branch = props.getProperty(cfg.githubBranchProperty) || cfg.defaultBranch;
-  var token = props.getProperty(cfg.githubTokenProperty) || '';
+  var token = prerequisites.githubToken;
 
   var current = readAppsScriptProjectContent_(scriptId);
   var githubFiles = fetchManagedGitHubFiles_(cfg, branch, token);
@@ -79,6 +78,9 @@ function CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS() {
     ok: current.ok && githubFiles.length === cfg.managedFiles.length,
     scriptId: scriptId,
     branch: branch,
+    requiredScopesValidated: true,
+    requiredScopes: MARKET_HOURS_GAS_REQUIRED_SCOPES_.slice(),
+    githubTokenConfigured: true,
     currentProjectReadable: current.ok,
     currentProjectHttpCode: current.httpCode,
     githubFilesFetched: githubFiles.map(function(file) {
@@ -96,23 +98,67 @@ function CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS() {
   return result;
 }
 
-// ── Main orchestrator ─────────────────────────────────────────
+function DRY_RUN_MARKET_HOURS_GAS_INSTALL() {
+  var prerequisites = assertMarketHoursInstallerPrerequisites_();
+  return runMarketHoursGasInstaller_(true, prerequisites);
+}
 
-function runMarketHoursGasInstaller_(dryRun) {
+function INSTALL_MARKET_HOURS_FROM_GITHUB() {
+  var prerequisites = assertMarketHoursInstallerPrerequisites_();
+  return runMarketHoursGasInstaller_(false, prerequisites);
+}
+
+// ── Hard prerequisites ────────────────────────────────────────
+
+function assertMarketHoursInstallerPrerequisites_() {
+  // Runtime authorization gate. If either required consent is missing,
+  // Apps Script stops this execution before any GitHub/API operation.
+  ScriptApp.requireScopes(
+    ScriptApp.AuthMode.FULL,
+    MARKET_HOURS_GAS_REQUIRED_SCOPES_
+  );
+
   var cfg = MARKET_HOURS_GAS_INSTALLER_CONFIG;
   validateInstallerConfig_(cfg);
 
   var props = PropertiesService.getScriptProperties();
+  var githubToken = String(props.getProperty(cfg.githubTokenProperty) || '').trim();
+
+  if (!githubToken) {
+    throw new Error(
+      'Script Property "' + cfg.githubTokenProperty + '" is missing or empty. ' +
+      'Add the GitHub personal access token in Project Settings → Script Properties ' +
+      'before running CHECK, DRY_RUN or INSTALL.'
+    );
+  }
+
+  return {
+    cfg: cfg,
+    props: props,
+    githubToken: githubToken
+  };
+}
+
+// ── Main orchestrator ─────────────────────────────────────────
+
+function runMarketHoursGasInstaller_(dryRun, prerequisites) {
+  var gate = prerequisites || assertMarketHoursInstallerPrerequisites_();
+  var cfg = gate.cfg;
+  var props = gate.props;
+  var githubToken = gate.githubToken;
   var scriptId = getMarketHoursTargetScriptId_(cfg, props);
   var branch = props.getProperty(cfg.githubBranchProperty) || cfg.defaultBranch;
-  var githubToken = props.getProperty(cfg.githubTokenProperty) || '';
 
   Logger.log('══════════════════════════════════════════════');
   Logger.log((dryRun ? 'DRY RUN — ' : '') + 'Market Hours GitHub → GAS Installer');
   Logger.log('Repository    : ' + cfg.githubOwner + '/' + cfg.githubRepo);
   Logger.log('Branch/ref    : ' + branch);
   Logger.log('Target Script : ' + scriptId);
-  Logger.log('GitHub token  : ' + (githubToken ? 'configured' : 'not set (public repo mode)'));
+  Logger.log('OAuth scopes  : validated (' + MARKET_HOURS_GAS_REQUIRED_SCOPES_.length + ')');
+  MARKET_HOURS_GAS_REQUIRED_SCOPES_.forEach(function(scope) {
+    Logger.log('  ' + scope);
+  });
+  Logger.log('GitHub token  : configured [required property: ' + cfg.githubTokenProperty + ']');
 
   var currentState = readAppsScriptProjectContent_(scriptId);
 
@@ -171,13 +217,31 @@ function runMarketHoursGasInstaller_(dryRun) {
     Logger.log('DRY RUN complete — no project content written.');
     Logger.log('Changed managed files: ' + (changedNames.length ? changedNames.join(', ') : '(none)'));
 
-    return buildInstallerResult_(true, scriptId, branch, currentState, githubFiles, payload, changedNames, null);
+    return buildInstallerResult_(
+      true,
+      scriptId,
+      branch,
+      currentState,
+      githubFiles,
+      payload,
+      changedNames,
+      null
+    );
   }
 
   if (!changedNames.length) {
     Logger.log('');
     Logger.log('No managed file changes detected — skipping PUT /content.');
-    return buildInstallerResult_(false, scriptId, branch, currentState, githubFiles, payload, changedNames, null);
+    return buildInstallerResult_(
+      false,
+      scriptId,
+      branch,
+      currentState,
+      githubFiles,
+      payload,
+      changedNames,
+      null
+    );
   }
 
   Logger.log('');
@@ -186,7 +250,16 @@ function runMarketHoursGasInstaller_(dryRun) {
   Logger.log('✓ Install complete.');
   Logger.log('Editor: ' + updateResult.editorUrl);
 
-  return buildInstallerResult_(false, scriptId, branch, currentState, githubFiles, payload, changedNames, updateResult);
+  return buildInstallerResult_(
+    false,
+    scriptId,
+    branch,
+    currentState,
+    githubFiles,
+    payload,
+    changedNames,
+    updateResult
+  );
 }
 
 function buildInstallerResult_(dryRun, scriptId, branch, currentState, githubFiles, payload, changedNames, updateResult) {
@@ -198,6 +271,9 @@ function buildInstallerResult_(dryRun, scriptId, branch, currentState, githubFil
     scriptId: scriptId,
     editorUrl: 'https://script.google.com/d/' + scriptId + '/edit',
     branch: branch,
+    requiredScopesValidated: true,
+    requiredScopes: MARKET_HOURS_GAS_REQUIRED_SCOPES_.slice(),
+    githubTokenConfigured: true,
     currentProjectReadable: currentState.ok,
     currentProjectHttpCode: currentState.httpCode,
     managedFilesCount: githubFiles.length,
@@ -238,6 +314,10 @@ function getMarketHoursTargetScriptId_(cfg, props) {
 function validateInstallerConfig_(cfg) {
   if (!cfg.githubOwner || !cfg.githubRepo || !cfg.defaultBranch) {
     throw new Error('Installer config is missing githubOwner, githubRepo or defaultBranch.');
+  }
+
+  if (!cfg.githubTokenProperty) {
+    throw new Error('Installer config is missing githubTokenProperty.');
   }
 
   if (!Array.isArray(cfg.managedFiles) || !cfg.managedFiles.length) {
@@ -286,6 +366,13 @@ function validateFetchedManagedFiles_(files, cfg) {
 // ── GitHub ────────────────────────────────────────────────────
 
 function fetchManagedGitHubFiles_(cfg, branch, token) {
+  if (!token) {
+    throw new Error(
+      'Internal prerequisite failure: GitHub token is empty. ' +
+      'Run through a public installer entry point so prerequisite validation executes.'
+    );
+  }
+
   return cfg.managedFiles.map(function(mapping) {
     var encodedPath = mapping.githubPath.split('/').map(encodeURIComponent).join('/');
     var url = 'https://api.github.com/repos/' +
@@ -326,15 +413,16 @@ function fetchManagedGitHubFiles_(cfg, branch, token) {
 }
 
 function marketHoursGithubFetch_(url, token, userAgent) {
+  if (!token) {
+    throw new Error('GitHub token is required for all installer GitHub requests.');
+  }
+
   var headers = {
+    'Authorization': 'Bearer ' + token,
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': userAgent || 'MarketHours-GAS-Installer/1.0'
+    'User-Agent': userAgent || 'MarketHours-GAS-Installer/1.1'
   };
-
-  if (token) {
-    headers.Authorization = 'Bearer ' + token;
-  }
 
   return UrlFetchApp.fetch(url, {
     method: 'get',
