@@ -7,7 +7,7 @@
 //
 // PRIMARY USE CASE
 //   GitHub: scripts/index.html
-//   GAS   : index [HTML]
+//   GAS   : Index [HTML]
 //
 // PUBLIC ENTRY POINTS
 //   CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS()
@@ -50,7 +50,7 @@ var MARKET_HOURS_GAS_INSTALLER_CONFIG = {
   managedFiles: [
     {
       githubPath: 'scripts/index.html',
-      scriptName: 'index',
+      scriptName: 'Index',
       scriptType: 'HTML'
     }
   ]

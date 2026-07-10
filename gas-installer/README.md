@@ -8,7 +8,7 @@ Current mapping:
 
 ```text
 GitHub                         Google Apps Script
-scripts/index.html      →      index [HTML]
+scripts/index.html      →      Index [HTML]
 ```
 
 All other files already present in the target Apps Script project are preserved automatically, including:
@@ -198,7 +198,7 @@ The installer:
 2. requires Script Property `GITHUB_TOKEN`;
 3. reads the current Apps Script project with `GET /projects/{scriptId}/content`;
 4. fetches `scripts/index.html` from GitHub with authenticated GitHub API access;
-5. maps it to Apps Script file `index [HTML]`;
+5. maps it to Apps Script file `Index [HTML]`;
 6. preserves every unmanaged current project file;
 7. compares current and GitHub source;
 8. skips the update entirely when there is no managed change;
@@ -214,7 +214,7 @@ The installer:
 - Existing web app configuration remains untouched unless it already lives inside a managed file, which it currently does not.
 - No deployment is created, changed or deleted.
 - No GitHub write operation is performed.
-- If `index` is unchanged, the installer does not call `updateContent`.
+- If `Index` is unchanged, the installer does not call `updateContent`.
 
 ## Adding future GAS files
 
@@ -224,7 +224,7 @@ Edit `managedFiles` inside `InstallFromGitHub.gs`:
 managedFiles: [
   {
     githubPath: 'scripts/index.html',
-    scriptName: 'index',
+    scriptName: 'Index',
     scriptType: 'HTML'
   },
   {
