@@ -20,12 +20,31 @@ All other files already present in the target Apps Script project are preserved 
 
 The installer refuses to perform a live install if it cannot read the current Apps Script project content first. This prevents `projects.updateContent` from accidentally deleting unmanaged local files.
 
-## One-time setup
+## Hard prerequisites
 
-1. Open the target Google Apps Script project.
-2. Create a file named `InstallFromGitHub.gs`.
-3. Copy the full contents of `gas-installer/InstallFromGitHub.gs` into that file.
-4. Ensure the Apps Script manifest includes these OAuth scopes:
+The installer now blocks every public operation unless both requirements are satisfied:
+
+1. the two required OAuth scopes are authorized;
+2. Script Property `GITHUB_TOKEN` exists and is not empty.
+
+This applies to all three public functions:
+
+```javascript
+CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS()
+DRY_RUN_MARKET_HOURS_GAS_INSTALL()
+INSTALL_MARKET_HOURS_FROM_GITHUB()
+```
+
+## 1. Required OAuth scopes
+
+Before the first run, the Apps Script project's `appsscript.json` must include:
+
+```text
+https://www.googleapis.com/auth/script.projects
+https://www.googleapis.com/auth/script.external_request
+```
+
+Example manifest:
 
 ```json
 {
@@ -39,7 +58,61 @@ The installer refuses to perform a live install if it cannot read the current Ap
 }
 ```
 
-If the target project already has other operational scopes, keep them. Add these two; do not replace the existing scope list blindly.
+If the project already has other operational scopes, keep them and add these two. Do not replace the existing scope list blindly.
+
+Every public installer entry point calls:
+
+```javascript
+ScriptApp.requireScopes(
+  ScriptApp.AuthMode.FULL,
+  MARKET_HOURS_GAS_REQUIRED_SCOPES_
+);
+```
+
+Therefore:
+
+```text
+missing scope consent
+→ execution stops immediately
+→ authorization is requested from the Apps Script IDE
+→ no GitHub fetch occurs
+→ no Apps Script API call occurs
+```
+
+The installer only continues after both required consents are available.
+
+## 2. Required GitHub token
+
+Create this Script Property in **Project Settings → Script Properties**:
+
+```text
+GITHUB_TOKEN = <your GitHub personal access token>
+```
+
+`GITHUB_TOKEN` is mandatory even though the repository is public. The installer intentionally uses the same authenticated operational pattern as the other GitHub → Apps Script installers.
+
+Behavior:
+
+```text
+GITHUB_TOKEN missing or empty
+→ hard error immediately
+→ CHECK blocked
+→ DRY_RUN blocked
+→ INSTALL blocked
+```
+
+The token value is never written to logs or returned in installer results.
+
+## One-time setup
+
+1. Open the target Google Apps Script project.
+2. Create a file named `InstallFromGitHub.gs`.
+3. Copy the full contents of `gas-installer/InstallFromGitHub.gs` into that file.
+4. Add the two required OAuth scopes to `appsscript.json`.
+5. Add Script Property `GITHUB_TOKEN`.
+6. Run `CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS()`.
+7. Run `DRY_RUN_MARKET_HOURS_GAS_INSTALL()`.
+8. Only after reviewing the dry run, execute `INSTALL_MARKET_HOURS_FROM_GITHUB()`.
 
 ## Target project
 
@@ -65,16 +138,6 @@ To test another branch, set:
 MARKET_HOURS_GITHUB_BRANCH = feature/my-branch
 ```
 
-## GitHub token
-
-The `markethours` repository is public, so `GITHUB_TOKEN` is optional.
-
-A token can still be added as a Script Property to improve GitHub API rate limits:
-
-```text
-GITHUB_TOKEN = <token>
-```
-
 ## Recommended workflow
 
 ### 1. Check access
@@ -85,11 +148,19 @@ Run:
 CHECK_MARKET_HOURS_GAS_INSTALLER_ACCESS()
 ```
 
-This verifies:
+This function first validates required scope consent and the required GitHub token, then verifies:
 
 - the target Apps Script project can be read;
 - the configured GitHub branch can be read;
 - all managed source files can be fetched.
+
+Successful output includes:
+
+```text
+requiredScopesValidated: true
+githubTokenConfigured: true
+currentProjectReadable: true
+```
 
 ### 2. Dry run
 
@@ -103,6 +174,8 @@ The dry run logs:
 
 - repository and branch;
 - target Script ID;
+- validated OAuth scopes;
+- confirmation that `GITHUB_TOKEN` is configured, without exposing its value;
 - managed GitHub files;
 - whether each managed file changed;
 - GitHub blob SHA;
@@ -121,16 +194,20 @@ INSTALL_MARKET_HOURS_FROM_GITHUB()
 
 The installer:
 
-1. reads the current Apps Script project with `GET /projects/{scriptId}/content`;
-2. fetches `scripts/index.html` from GitHub;
-3. maps it to Apps Script file `index [HTML]`;
-4. preserves every unmanaged current project file;
-5. compares current and GitHub source;
-6. skips the update entirely when there is no managed change;
-7. otherwise sends one safe `PUT /projects/{scriptId}/content` payload.
+1. validates OAuth scope consent with `ScriptApp.requireScopes(...)`;
+2. requires Script Property `GITHUB_TOKEN`;
+3. reads the current Apps Script project with `GET /projects/{scriptId}/content`;
+4. fetches `scripts/index.html` from GitHub with authenticated GitHub API access;
+5. maps it to Apps Script file `index [HTML]`;
+6. preserves every unmanaged current project file;
+7. compares current and GitHub source;
+8. skips the update entirely when there is no managed change;
+9. otherwise sends one safe `PUT /projects/{scriptId}/content` payload.
 
 ## Safety properties
 
+- Scope consent is checked before any external operation.
+- `GITHUB_TOKEN` is mandatory.
 - Live install is blocked if the current Apps Script project cannot be read.
 - Unmanaged local files are preserved.
 - The Apps Script manifest is preserved because it is not managed by this installer.
