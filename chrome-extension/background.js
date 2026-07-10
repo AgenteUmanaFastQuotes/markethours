@@ -1,19 +1,54 @@
 // Chrome MV3 background entrypoint.
-// Loads the main service worker, keeps the packaged PNG notification icon,
-// and adds persistent diagnostics for every real market-opening alert.
+// Keeps the original scheduling/gong engine and adds an independent,
+// direct notification path that does not depend on overriding functions
+// declared inside service-worker.js.
 
 importScripts("service-worker.js");
 
-const NOTIFICATION_ICON_URL = chrome.runtime.getURL("icons/market-hours-128.png");
-const ORIGINAL_HANDLE_OPENING = self.handleOpening;
-const ORIGINAL_SHOW_TEST_NOTIFICATION = self.showTestNotification;
+const DIRECT_OPEN_ALARM_PREFIX = "market-open|";
+const DIRECT_NOTIFICATION_ICON_URL = chrome.runtime.getURL("icons/market-hours-128.png");
+const DIRECT_HANDLED_RETENTION_MS = 72 * 60 * 60 * 1000;
+const DIRECT_CATCH_UP_GRACE_MS = 60 * 1000;
 
-self.showOpeningNotification = async function showOpeningNotificationWithPng(opening, settings) {
+function pruneDirectNotificationHandled(records, nowMs = Date.now()) {
+  const output = {};
+
+  for (const [sessionKey, record] of Object.entries(records || {})) {
+    const timestamp = Number(record && record.at) || 0;
+    if (timestamp && nowMs - timestamp <= DIRECT_HANDLED_RETENTION_MS) {
+      output[sessionKey] = record;
+    }
+  }
+
+  return output;
+}
+
+async function persistDirectNotificationDiagnostic(diagnostic) {
+  const stored = await chrome.storage.local.get("scheduleStatus");
+  const scheduleStatus = {
+    ...(stored.scheduleStatus || {}),
+    lastDirectNotification: diagnostic,
+    lastAlertAt: diagnostic.at
+  };
+
+  if (!diagnostic.ok) {
+    scheduleStatus.lastError = `[NOTIFICATION] ${diagnostic.displayName || diagnostic.marketName || "Market"}: ${diagnostic.error || diagnostic.reason || "unknown failure"}`;
+  } else if (String(scheduleStatus.lastError || "").startsWith("[NOTIFICATION]")) {
+    scheduleStatus.lastError = null;
+  }
+
+  await chrome.storage.local.set({
+    lastDirectNotification: diagnostic,
+    scheduleStatus
+  });
+}
+
+async function createDirectOpeningNotification(opening, settings) {
   const notificationId = `market-open:${opening.sessionKey}`;
 
-  await chrome.notifications.create(notificationId, {
+  const createdId = await chrome.notifications.create(notificationId, {
     type: "basic",
-    iconUrl: NOTIFICATION_ICON_URL,
+    iconUrl: DIRECT_NOTIFICATION_ICON_URL,
     title: "MARKET HOURS",
     message: `${opening.displayName} acabou de abrir`,
     contextMessage: `${opening.label} • ${opening.localOpen.slice(0, 5)} local`,
@@ -23,116 +58,152 @@ self.showOpeningNotification = async function showOpeningNotificationWithPng(ope
     silent: true
   });
 
-  return true;
-};
+  const activeNotifications = await chrome.notifications.getAll();
 
-self.showTestNotification = async function showTestNotificationWithDiagnostics(settings) {
-  const now = new Date();
-  const notificationId = `market-hours:test:${now.getTime()}`;
-
-  try {
-    await chrome.notifications.create(notificationId, {
-      type: "basic",
-      iconUrl: NOTIFICATION_ICON_URL,
-      title: "MARKET HOURS",
-      message: "Teste de notificação concluído",
-      contextMessage: "Aberturas de mercado aparecerão desta forma.",
-      eventTime: now.getTime(),
-      priority: 2,
-      requireInteraction: Boolean(settings.requireInteraction),
-      silent: true
-    });
-
-    const diagnostic = {
-      at: now.toISOString(),
-      type: "test-notification",
-      ok: true,
-      notificationId
-    };
-
-    await chrome.storage.local.set({ lastNotificationTest: diagnostic });
-    console.info("Market Hours test notification succeeded:", diagnostic);
-    return true;
-  } catch (error) {
-    const diagnostic = {
-      at: now.toISOString(),
-      type: "test-notification",
-      ok: false,
-      notificationId,
-      error: error && error.message ? error.message : String(error)
-    };
-
-    await chrome.storage.local.set({ lastNotificationTest: diagnostic });
-    console.error("Market Hours test notification failed:", diagnostic);
-    throw error;
-  }
-};
-
-async function persistOpeningDiagnostic(opening, source, result) {
-  const diagnostic = {
-    at: new Date().toISOString(),
-    source: source || "unknown",
-    sessionKey: opening && opening.sessionKey ? opening.sessionKey : null,
-    marketName: opening && opening.marketName ? opening.marketName : null,
-    displayName: opening && opening.displayName ? opening.displayName : null,
-    localOpen: opening && opening.localOpen ? opening.localOpen : null,
-    openTimestamp: opening && opening.openTimestamp ? opening.openTimestamp : null,
-    ok: Boolean(result && result.ok),
-    sound: Boolean(result && result.sound),
-    notification: Boolean(result && result.notification),
-    reason: result && result.reason ? result.reason : null,
-    errors: Array.isArray(result && result.errors) ? result.errors : []
+  return {
+    notificationId: createdId,
+    activeInChrome: Boolean(activeNotifications[createdId])
   };
-
-  const stored = await chrome.storage.local.get("scheduleStatus");
-  const scheduleStatus = {
-    ...(stored.scheduleStatus || {}),
-    lastAlertAt: diagnostic.at,
-    lastAlert: diagnostic
-  };
-
-  if (!diagnostic.ok) {
-    const details = diagnostic.errors.length
-      ? diagnostic.errors.join(" | ")
-      : (diagnostic.reason || "unknown failure");
-    scheduleStatus.lastError = `[ALERT] ${diagnostic.displayName || diagnostic.marketName || "Market"}: ${details}`;
-  } else if (String(scheduleStatus.lastError || "").startsWith("[ALERT]")) {
-    scheduleStatus.lastError = null;
-  }
-
-  await chrome.storage.local.set({
-    lastOpeningEvent: diagnostic,
-    scheduleStatus
-  });
-
-  return diagnostic;
 }
 
-self.handleOpening = async function handleOpeningWithDiagnostics(opening, source = "alarm") {
-  let result;
+async function handleDirectOpeningNotification(opening, source = "alarm-direct") {
+  if (!opening || !opening.sessionKey) {
+    return { ok: false, reason: "invalid-opening" };
+  }
+
+  const nowMs = Date.now();
+  const stored = await chrome.storage.local.get([
+    "settings",
+    "directNotificationHandled"
+  ]);
+
+  const settings = {
+    notificationsEnabled: true,
+    requireInteraction: false,
+    ...(stored.settings || {})
+  };
+
+  if (!settings.notificationsEnabled) {
+    return { ok: true, skipped: true, reason: "notifications-disabled" };
+  }
+
+  const handled = pruneDirectNotificationHandled(
+    stored.directNotificationHandled || {},
+    nowMs
+  );
+
+  if (handled[opening.sessionKey]) {
+    return { ok: true, skipped: true, reason: "already-handled" };
+  }
 
   try {
-    result = await ORIGINAL_HANDLE_OPENING(opening, source);
-    const diagnostic = await persistOpeningDiagnostic(opening, source, result);
+    const created = await createDirectOpeningNotification(opening, settings);
 
-    if (diagnostic.ok) {
-      console.info("Market Hours opening alert completed:", diagnostic);
-    } else {
-      console.error("Market Hours opening alert failed:", diagnostic);
-    }
-
-    return result;
-  } catch (error) {
-    result = {
-      ok: false,
-      source,
-      sound: false,
-      notification: false,
-      errors: [error && error.message ? error.message : String(error)]
+    handled[opening.sessionKey] = {
+      at: nowMs,
+      notificationId: created.notificationId,
+      activeInChrome: created.activeInChrome
     };
 
-    const diagnostic = await persistOpeningDiagnostic(opening, source, result);
-    console.error("Market Hours opening alert crashed:", diagnostic, error);
-    throw error;
+    const diagnostic = {
+      at: new Date(nowMs).toISOString(),
+      source,
+      sessionKey: opening.sessionKey,
+      marketName: opening.marketName || null,
+      displayName: opening.displayName || opening.marketName || null,
+      localOpen: opening.localOpen || null,
+      openTimestamp: opening.openTimestamp || null,
+      ok: true,
+      notificationId: created.notificationId,
+      activeInChrome: created.activeInChrome,
+      iconUrl: DIRECT_NOTIFICATION_ICON_URL
+    };
+
+    await chrome.storage.local.set({ directNotificationHandled: handled });
+    await persistDirectNotificationDiagnostic(diagnostic);
+    console.info("Market Hours direct opening notification succeeded:", diagnostic);
+
+    return diagnostic;
+  } catch (error) {
+    const diagnostic = {
+      at: new Date(nowMs).toISOString(),
+      source,
+      sessionKey: opening.sessionKey,
+      marketName: opening.marketName || null,
+      displayName: opening.displayName || opening.marketName || null,
+      localOpen: opening.localOpen || null,
+      openTimestamp: opening.openTimestamp || null,
+      ok: false,
+      error: error && error.message ? error.message : String(error),
+      iconUrl: DIRECT_NOTIFICATION_ICON_URL
+    };
+
+    await persistDirectNotificationDiagnostic(diagnostic);
+    console.error("Market Hours direct opening notification failed:", diagnostic, error);
+
+    return diagnostic;
   }
-};
+}
+
+async function processRecentOpeningsFromSchedule(scheduledOpenings, source) {
+  const nowMs = Date.now();
+  const recent = Object.values(scheduledOpenings || {}).filter((opening) => {
+    const timestamp = Number(opening && opening.openTimestamp) || 0;
+    return timestamp <= nowMs && nowMs - timestamp <= DIRECT_CATCH_UP_GRACE_MS;
+  });
+
+  for (const opening of recent) {
+    await handleDirectOpeningNotification(opening, source);
+  }
+}
+
+// Independent real-alarm listener. It uses the packaged PNG directly and does
+// not depend on showOpeningNotification() or handleOpening() overrides.
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (!alarm || !alarm.name || !alarm.name.startsWith(DIRECT_OPEN_ALARM_PREFIX)) return;
+
+  (async () => {
+    const { scheduledOpenings = {} } = await chrome.storage.local.get("scheduledOpenings");
+    const opening = scheduledOpenings[alarm.name];
+
+    if (!opening) {
+      const diagnostic = {
+        at: new Date().toISOString(),
+        source: "alarm-direct",
+        ok: false,
+        reason: "opening-not-found",
+        alarmName: alarm.name
+      };
+      await persistDirectNotificationDiagnostic(diagnostic);
+      console.error("Market Hours direct opening notification failed:", diagnostic);
+      return;
+    }
+
+    await handleDirectOpeningNotification(opening, "alarm-direct");
+  })().catch(async (error) => {
+    const diagnostic = {
+      at: new Date().toISOString(),
+      source: "alarm-direct",
+      ok: false,
+      reason: "listener-crash",
+      error: error && error.message ? error.message : String(error),
+      alarmName: alarm.name
+    };
+
+    await persistDirectNotificationDiagnostic(diagnostic).catch(() => {});
+    console.error("Market Hours direct alarm listener crashed:", diagnostic, error);
+  });
+});
+
+// Covers catch-up openings created by schedule refreshes/startup within the
+// existing 60-second grace window.
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local" || !changes.scheduledOpenings) return;
+
+  processRecentOpeningsFromSchedule(
+    changes.scheduledOpenings.newValue || {},
+    "schedule-catch-up-direct"
+  ).catch((error) => {
+    console.error("Market Hours direct catch-up notification failed:", error);
+  });
+});
